@@ -4,6 +4,34 @@ Wszystkie istotne zmiany projektu są dokumentowane w tym pliku. Format opiera s
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-10
+
+### Added
+
+- Dodano jeden centralny message bus WebView dla uruchamiania zadań, researchu, historii, kontroli narzędzi i aktualizacji.
+- Dodano diagnostykę utworzenia panelu i inicjalizacji klienta WebView oraz ustawienia czterech ścieżek z wyborem katalogu.
+
+### Changed
+
+- Panel jest bardziej kompaktowy, responsywny od 260 do 500 px, dostępny z klawiatury i używa akcentu RAL 6018.
+- Uporządkowano nazwy, statusy, przyciski i informacje o autonomii, wykonawcy, trybie próbnym, narzędziach, wersji, historii i researchu.
+
+### Tests
+
+- Dodano testy centralnego busa dla `run`, `healthCheck`, `research`, `history` i `checkForUpdates` oraz inicjalizacji klienta.
+
+## [0.2.5] - 2026-08-10
+
+### Added
+
+- Dodano niezależną od WebView komendę `Kondzio AI: Check for Updates` z komunikatami VS Code i diagnostyką w kanale Output.
+- Dodano komendy `Reload Panel` oraz `Reset WebView State` do awaryjnego odtworzenia panelu i wyczyszczenia wyłącznie jego stanu UI.
+- W panelu dodano widoczną instrukcję użycia sprawdzania aktualizacji z palety poleceń.
+
+### Tests
+
+- Dodano test bezpośredniego przepływu command → UpdateService oraz przypadków `current` i `updateAvailable`.
+
 ## [0.2.4] - 2026-08-10
 
 ### Changed

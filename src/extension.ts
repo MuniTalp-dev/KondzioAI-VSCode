@@ -4,11 +4,12 @@ import { McpBackend } from "./backend";
 import { OrchestratorController, statusBarText } from "./model";
 import { KondzioViewProvider } from "./panel";
 import { UPDATE_CONFIRMATION, UpdateService, updateApproved } from "./update";
+import { checkForUpdatesCommand } from "./updateCommand";
 
 export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel("Kondzio AI");
   const config = vscode.workspace.getConfiguration("kondzioAi");
-  const root = config.get<string>("orchestratorRoot", "E:\\AI\\Orchestrator");
+  const root = config.get<string>("orchestratorPath", config.get<string>("orchestratorRoot", "E:\\AI\\Orchestrator"));
   const python = config.get<string>("pythonPath", join(root, ".venv", "Scripts", "python.exe"));
   const backend = new McpBackend(python, root, context.asAbsolutePath(join("python", "mcp_bridge.py")));
   const controller = new OrchestratorController(backend);
@@ -39,6 +40,15 @@ export function activate(context: vscode.ExtensionContext): void {
   command("kondzioAi.status", async () => { await reveal(); await provider.refreshStatus(); });
   command("kondzioAi.lastReport", async () => { await provider.showLastReport(); });
   command("kondzioAi.history", async () => { await reveal(); await provider.showHistory(); });
+  command("kondzioAi.checkForUpdates", async () => {
+    await checkForUpdatesCommand(updates, {
+      information: (message, action) => action ? vscode.window.showInformationMessage(message, action) : vscode.window.showInformationMessage(message),
+      warning: (message, action) => action ? vscode.window.showWarningMessage(message, action) : vscode.window.showWarningMessage(message),
+      openRelease: async url => { await vscode.env.openExternal(vscode.Uri.parse(url)); },
+    }, log);
+  });
+  command("kondzioAi.reloadPanel", async () => { await provider.reloadPanel(); });
+  command("kondzioAi.resetWebviewState", async () => { await provider.resetWebviewState(); });
 }
 
 export function deactivate(): void {}

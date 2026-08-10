@@ -7,8 +7,8 @@ Panel otwiera się ikoną **Kondzio AI** w Activity Bar albo komendą **Kondzio 
 - **Co mam zrobić?** — wielowierszowy opis celu, ograniczeń i oczekiwanego wyniku.
 - **AUTONOMIA** — AUTO 1, AUTO 2 lub AUTO 3; domyślnie AUTO 2.
 - **WYKONAWCA** — AUTO, LOCAL, RESEARCH albo CODEX; domyślnie AUTO.
-- **Dry-run** — blokuje implementację i pozwala zobaczyć routing oraz plan.
-- **URUCHOM** — wysyła zadanie do `orchestrator_run`.
+- **TRYB PRÓBNY** — tworzy plan i analizę bez zmiany plików (`dry-run`).
+- **URUCHOM ZADANIE** — wysyła zadanie do `orchestrator_run`.
 
 ## Przyciski operacyjne
 
@@ -27,15 +27,17 @@ Pasek postępu jest orientacyjny: routing 10%, research 25%, planning 35%, imple
 
 Status bar pokazuje `Kondzio AI: IDLE`, aktualnego agenta podczas pracy, `DONE` po sukcesie albo `FAILED` dla stanów niepowodzenia. Kliknięcie otwiera panel.
 
-## Środowisko
+## Stan narzędzi
 
-Sekcja **ŚRODOWISKO** wykonuje rzeczywiste lekkie kontrole Orchestratora, sesji MCP, SearXNG, Ollama, modelu Qwen, Aider, Codex CLI, Git i .NET SDK. Pokazuje `CHECKING`, `OK`, `WARNING` albo `ERROR`, wersję narzędzia i szczegóły w podpowiedzi. **SPRAWDŹ PONOWNIE** uruchamia kontrolę ręcznie.
+Sekcja **STAN NARZĘDZI** wykonuje rzeczywiste lekkie kontrole Orchestratora, sesji MCP, SearXNG, Ollama, modelu Qwen, Aider, Codex CLI, Git i .NET SDK. Lista pozostaje kompaktowa, a wersje i szczegóły są dostępne po rozwinięciu. **SPRAWDŹ STAN** uruchamia kontrolę ręcznie.
 
 Przed wymuszonym LOCAL panel blokuje run, jeśli brakuje Ollama, Qwen albo Aider. Analogicznie blokuje niedostępny CODEX. AUTO nie jest blokowany i pozostawia fallback Orchestratorowi. RESEARCH pokazuje informację o DDGS, gdy SearXNG ma problem.
 
 ## Aktualizacje
 
-Sekcja **WERSJA** pokazuje bieżącą wersję i wynik GitHub Releases. Kontrola automatyczna odbywa się najwyżej raz na 24 godziny, a przycisk pozwala sprawdzić ręcznie. **AKTUALIZUJ** wymaga modalnej zgody i jedynie otwiera stronę release; niczego nie instaluje. **PÓŹNIEJ** ukrywa bieżące wezwanie.
+Sekcja **WERSJA** pokazuje bieżącą wersję i czytelny status GitHub Releases. Przycisk panelu i komenda **Kondzio AI: Check for Updates** korzystają z tego samego `UpdateService`. **OTWÓRZ WYDANIE** wymaga modalnej zgody i niczego nie instaluje.
+
+Panel używa jednego delegowanego mechanizmu komunikacji dla wszystkich przycisków. Układ nie ma poziomego przewijania przy szerokościach 260, 320, 400 i 500 px; wszystkie akcje mają widoczny focus i etykiety dostępności, a statusy korzystają z `aria-live`.
 
 ## Pierwsze zadanie
 

@@ -20,11 +20,11 @@ test("checking pokazuje status sprawdzania", () => {
 });
 
 test("error pokazuje status błędu", () => {
-  assert.equal(versionStatusPresentation({ status: "error", currentVersion: "0.2.3" }).text, "✕ NIE UDAŁO SIĘ SPRAWDZIĆ AKTUALIZACJI");
+  assert.equal(versionStatusPresentation({ status: "error", currentVersion: "0.2.3" }).text, "✕ BŁĄD SPRAWDZANIA");
 });
 
 test("timeout pokazuje status przekroczenia czasu", () => {
-  assert.equal(versionStatusPresentation({ status: "timeout", currentVersion: "0.2.3" }).text, "! PRZEKROCZONO CZAS SPRAWDZANIA");
+  assert.equal(versionStatusPresentation({ status: "timeout", currentVersion: "0.2.3" }).text, "! TIMEOUT");
 });
 
 test("zielony status nie pojawia się bez wiarygodnej najnowszej wersji", () => {

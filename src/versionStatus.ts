@@ -17,13 +17,13 @@ export function versionStatusPresentation(result: UpdateResult): VersionStatusPr
     return { text: `⚠ DOSTĘPNA AKTUALIZACJA ${latestVersion}`.trim(), tone: "warning", showReleaseButton: true };
   }
   if (result.status === "timeout") {
-    return { text: "! PRZEKROCZONO CZAS SPRAWDZANIA", tone: "warning", showReleaseButton: false };
+    return { text: "! TIMEOUT", tone: "warning", showReleaseButton: false };
   }
   if (result.status === "error") {
-    return { text: "✕ NIE UDAŁO SIĘ SPRAWDZIĆ AKTUALIZACJI", tone: "error", showReleaseButton: false };
+    return { text: "✕ BŁĄD SPRAWDZANIA", tone: "error", showReleaseButton: false };
   }
   if (result.status === "current" && result.latestVersion) {
     return { text: "✓ OPROGRAMOWANIE AKTUALNE", tone: "success", showReleaseButton: false };
   }
-  return { text: "Nie sprawdzono aktualności oprogramowania.", tone: "progress", showReleaseButton: false };
+  return { text: "? NIE SPRAWDZONO", tone: "progress", showReleaseButton: false };
 }

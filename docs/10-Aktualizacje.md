@@ -1,6 +1,8 @@
 # Aktualizacje
 
-Wersja 0.2.3 sprawdza najnowszy GitHub Release ręcznie albo automatycznie maksymalnie raz na 24 godziny. Wymaga ustawienia `kondzioAi.updateRepository` jako `owner/KondzioAI-VSCode`.
+Wersja 0.3.0 sprawdza najnowszy GitHub Release ręcznie albo automatycznie maksymalnie raz na 24 godziny. Wymaga ustawienia `kondzioAi.updateRepository` jako `owner/KondzioAI-VSCode`.
+
+Przycisk panelu i awaryjna komenda **Kondzio AI: Check for Updates** wywołują ten sam `UpdateService` w Extension Host.
 
 Panel pokazuje wersję zainstalowaną, najnowszą wiarygodnie sprawdzoną wersję i jeden wyraźny status:
 

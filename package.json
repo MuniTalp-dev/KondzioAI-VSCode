@@ -2,7 +2,7 @@
   "name": "kondzio-ai",
   "displayName": "Kondzio AI",
   "description": "Interfejs VS Code dla lokalnego Kondzio AI Orchestrator.",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "publisher": "kondzio-studio",
   "license": "UNLICENSED",
   "engines": { "vscode": "^1.100.0" },
@@ -34,11 +34,18 @@
       { "command": "kondzioAi.status", "title": "Kondzio AI: Status" },
       { "command": "kondzioAi.lastReport", "title": "Kondzio AI: Last Report" },
       { "command": "kondzioAi.history", "title": "Kondzio AI: History" }
+      ,{ "command": "kondzioAi.checkForUpdates", "title": "Kondzio AI: Check for Updates" }
+      ,{ "command": "kondzioAi.reloadPanel", "title": "Kondzio AI: Reload Panel" }
+      ,{ "command": "kondzioAi.resetWebviewState", "title": "Kondzio AI: Reset WebView State" }
     ],
     "configuration": {
       "title": "Kondzio AI",
       "properties": {
-        "kondzioAi.orchestratorRoot": { "type": "string", "default": "E:\\AI\\Orchestrator", "description": "Ścieżka do lokalnego Orchestratora." },
+        "kondzioAi.orchestratorPath": { "type": "string", "default": "E:\\AI\\Orchestrator", "description": "Ścieżka do lokalnego Orchestratora." },
+        "kondzioAi.researchLabPath": { "type": "string", "default": "E:\\AI\\ResearchLab", "description": "Ścieżka do ResearchLab." },
+        "kondzioAi.sandboxPath": { "type": "string", "default": "E:\\AI\\Repos", "description": "Ścieżka do sandboxu LOCAL." },
+        "kondzioAi.projectsRoot": { "type": "string", "default": "C:\\Projekty\\VCode", "description": "Główny katalog projektów." },
+        "kondzioAi.orchestratorRoot": { "type": "string", "default": "E:\\AI\\Orchestrator", "description": "Starsza nazwa ustawienia Orchestratora." },
         "kondzioAi.pythonPath": { "type": "string", "default": "E:\\AI\\Orchestrator\\.venv\\Scripts\\python.exe", "description": "Interpreter Python Orchestratora." },
         "kondzioAi.updateRepository": { "type": "string", "default": "MuniTalp-dev/KondzioAI-VSCode", "description": "Repozytorium GitHub Releases w formacie owner/KondzioAI-VSCode." }
       }

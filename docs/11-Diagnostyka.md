@@ -32,6 +32,8 @@ Wersja 0.2.0 ma sekcję **ŚRODOWISKO** z dziewięcioma lekkimi kontrolami. Przy
 3. Sprawdź **Developer: Toggle Developer Tools** oraz log Extension Host.
 4. Uruchom z katalogu rozszerzenia `npm test`.
 5. Uruchom `python test\bridge_integration.py` właściwym Pythonem Orchestratora.
+6. Użyj **Kondzio AI: Reload Panel**, aby odtworzyć WebView bez restartowania VS Code.
+7. Użyj **Kondzio AI: Reset WebView State**, aby wyczyścić stan UI bez zmiany konfiguracji użytkownika.
 
 ## Logi i artefakty
 
