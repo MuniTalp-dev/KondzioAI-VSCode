@@ -1,0 +1,49 @@
+{
+  "name": "kondzio-ai",
+  "displayName": "Kondzio AI",
+  "description": "Interfejs VS Code dla lokalnego Kondzio AI Orchestrator.",
+  "version": "0.2.0",
+  "publisher": "kondzio-studio",
+  "license": "UNLICENSED",
+  "engines": { "vscode": "^1.100.0" },
+  "categories": ["Other"],
+  "main": "./dist/src/extension.js",
+  "activationEvents": ["onView:kondzioAi.main"],
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -w -p ./",
+    "test": "npm run compile && node --test dist/test/*.test.js",
+    "package": "npm run test && vsce package --no-dependencies --allow-missing-repository --no-rewrite-relative-links"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/vscode": "^1.100.0",
+    "@vscode/vsce": "^3.6.0",
+    "typescript": "^5.9.0"
+  },
+  "contributes": {
+    "viewsContainers": { "activitybar": [{ "id": "kondzioAi", "title": "Kondzio AI", "icon": "media/kondzio-ai.svg" }] },
+    "views": { "kondzioAi": [{ "id": "kondzioAi.main", "name": "Kondzio AI", "type": "webview" }] },
+    "commands": [
+      { "command": "kondzioAi.newTask", "title": "Kondzio AI: New Task" },
+      { "command": "kondzioAi.auto1", "title": "Kondzio AI: AUTO 1" },
+      { "command": "kondzioAi.auto2", "title": "Kondzio AI: AUTO 2" },
+      { "command": "kondzioAi.auto3", "title": "Kondzio AI: AUTO 3" },
+      { "command": "kondzioAi.research", "title": "Kondzio AI: Research" },
+      { "command": "kondzioAi.status", "title": "Kondzio AI: Status" },
+      { "command": "kondzioAi.lastReport", "title": "Kondzio AI: Last Report" },
+      { "command": "kondzioAi.history", "title": "Kondzio AI: History" }
+    ],
+    "configuration": {
+      "title": "Kondzio AI",
+      "properties": {
+        "kondzioAi.orchestratorRoot": { "type": "string", "default": "E:\\AI\\Orchestrator", "description": "Ścieżka do lokalnego Orchestratora." },
+        "kondzioAi.pythonPath": { "type": "string", "default": "E:\\AI\\Orchestrator\\.venv\\Scripts\\python.exe", "description": "Interpreter Python Orchestratora." },
+        "kondzioAi.updateRepository": { "type": "string", "default": "MuniTalp-dev/KondzioAI-VSCode", "description": "Repozytorium GitHub Releases w formacie owner/KondzioAI-VSCode." }
+      }
+    }
+  },
+  "files": ["dist", "media", "python", "docs", "README.md", "CHANGELOG.md", "LICENSE"],
+  "author": "Właściciel projektu Kondzio AI",
+  "private": true
+}
