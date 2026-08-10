@@ -1,7 +1,7 @@
 export type Autonomy = 1 | 2 | 3;
 export type ExecutorMode = "auto" | "local" | "research" | "codex";
 
-export interface RunRequest { prompt: string; autonomy: Autonomy; mode: ExecutorMode; dry_run: boolean; }
+export interface RunRequest { prompt: string; autonomy: Autonomy; mode: ExecutorMode; dry_run: boolean; prefer_local: boolean; block_codex_escalation: boolean; codex_approved?: boolean; }
 export interface RunSummary { run_id: string; prompt?: string; status?: string; autonomy?: number; agent?: string; eta_minutes?: number; actual_minutes?: number; started_at?: string; }
 export interface StatusResult {
   run_id: string; status: string; started_at?: string; elapsed_seconds?: number; current_stage?: string;
@@ -10,6 +10,9 @@ export interface StatusResult {
   validation_status?: string; test_status?: string; files_changed?: string[]; commit_status?: string;
   push_status?: string; dry_run?: boolean; routing?: Record<string, unknown>; plan?: string[]; risks?: string[];
   acceptance_criteria?: { items?: string[]; [key: string]: unknown };
+  prefer_local?: boolean; block_codex_escalation?: boolean; codex_allowed?: boolean; codex_required?: boolean;
+  codex_reason?: string; executors_used?: string[]; local_attempts?: number; research_used?: boolean;
+  codex_used?: boolean; codex_blocked?: boolean; estimated_codex_savings?: string;
 }
 
 export interface OrchestratorBackend {

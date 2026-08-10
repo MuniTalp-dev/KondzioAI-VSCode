@@ -1,5 +1,9 @@
 # Wykonawcy
 
+## Oszczędzanie CODEX
+
+Opcja **Preferuj LOCAL** kieruje najpierw do Qwen + Ollama + Aider. Opcja **Nie eskaluj automatycznie do CODEX** zatrzymuje run po dwóch nieudanych próbach jako `awaiting_codex_approval`. Dopiero przycisk **URUCHOM PRZEZ CODEX** udziela jednorazowej zgody.
+
 ## AUTO
 
 AUTO deleguje wybór routerowi. Jest najlepszym ustawieniem domyślnym, gdy użytkownik opisuje cel, ale nie chce wybierać narzędzia. Router bierze pod uwagę złożoność, temat, niepewność i potrzebę aktualnych źródeł.

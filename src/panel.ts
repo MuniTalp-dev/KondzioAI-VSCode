@@ -4,13 +4,14 @@ import { Autonomy, ExecutorMode, StatusResult } from "./types";
 import { UpdateService } from "./update";
 import { AUTONOMY_DESCRIPTIONS, MODE_DESCRIPTIONS } from "./descriptions";
 
-type PanelMessage = { command: string; prompt?: string; autonomy?: Autonomy; mode?: ExecutorMode; dryRun?: boolean; query?: string; runId?: string };
+type PanelMessage = { command: string; prompt?: string; autonomy?: Autonomy; mode?: ExecutorMode; dryRun?: boolean; preferLocal?: boolean; blockCodexEscalation?: boolean; query?: string; runId?: string };
 
 export class KondzioViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   static readonly viewType = "kondzioAi.main";
   private view?: vscode.WebviewView;
   private poll?: NodeJS.Timeout;
   private currentRunId?: string;
+  private lastRequest?: { prompt: string; autonomy: Autonomy; mode: ExecutorMode; dryRun: boolean; preferLocal: boolean; blockCodexEscalation: boolean };
 
   constructor(private readonly controller: OrchestratorController,
               private readonly onStatus: (status?: StatusResult) => void,
@@ -31,13 +32,15 @@ export class KondzioViewProvider implements vscode.WebviewViewProvider, vscode.D
   reveal(): Thenable<unknown> { return vscode.commands.executeCommand("workbench.view.extension.kondzioAi"); }
   preset(autonomy?: Autonomy, section = "task"): void { this.post({ type: "preset", autonomy, section }); }
 
-  async run(prompt: string, autonomy: Autonomy, mode: ExecutorMode, dryRun: boolean): Promise<void> {
+  async run(prompt: string, autonomy: Autonomy, mode: ExecutorMode, dryRun: boolean,
+            preferLocal = false, blockCodexEscalation = false, codexApproved = false): Promise<void> {
     if (!prompt.trim()) { throw new Error("Pole „Co mam zrobić?” nie może być puste."); }
     this.post({ type: "busy", value: true });
     const preflight = await this.controller.preflight(mode);
     this.post({ type: "health", value: preflight.health });
     if (preflight.warnings.length) { this.post({ type: "warning", value: preflight.warnings.join("\n") }); }
-    const status = await this.controller.run(prompt.trim(), autonomy, mode, dryRun);
+    this.lastRequest = { prompt: prompt.trim(), autonomy, mode, dryRun, preferLocal, blockCodexEscalation };
+    const status = await this.controller.run(prompt.trim(), autonomy, mode, dryRun, preferLocal, blockCodexEscalation, codexApproved);
     this.currentRunId = status.run_id;
     this.publishStatus(status);
     if (ACTIVE_STATES.has(status.status)) { this.startPolling(); }
@@ -61,7 +64,9 @@ export class KondzioViewProvider implements vscode.WebviewViewProvider, vscode.D
   private async handle(message: PanelMessage): Promise<void> {
     try {
       switch (message.command) {
-        case "run": await this.run(message.prompt ?? "", message.autonomy ?? 2, message.mode ?? "auto", Boolean(message.dryRun)); break;
+        case "run": await this.run(message.prompt ?? "", message.autonomy ?? 2, message.mode ?? "auto", Boolean(message.dryRun), Boolean(message.preferLocal), Boolean(message.blockCodexEscalation)); break;
+        case "approveCodex": if (this.lastRequest) { const r = this.lastRequest; await this.run(r.prompt, r.autonomy, "codex", r.dryRun, false, r.blockCodexEscalation, true); } break;
+        case "finishTask": this.stopPolling(); this.post({ type: "finishedProtected" }); break;
         case "cancel": this.publishStatus(await this.controller.cancel(message.runId ?? this.currentRunId) as unknown as StatusResult); this.stopPolling(); break;
         case "status": await this.refreshStatus(message.runId); break;
         case "history": await this.showHistory(); break;
@@ -104,9 +109,11 @@ function html(): string {
   <div class="brand"><div class="logo">K·AI</div><div><strong>Kondzio AI</strong><div class="muted">Lokalny Orchestrator</div></div></div>
   <div class="field"><label for="prompt">Co mam zrobić?</label><textarea id="prompt" placeholder="Opisz zadanie dla Orchestratora..."></textarea></div>
   <div class="row"><div class="field"><div class="labelrow"><label>AUTONOMIA</label><button id="autonomyInfo" class="info" aria-label="Opis wybranego poziomu autonomii" title="Opis wybranego poziomu autonomii">i</button></div><select id="autonomy"><option value="1">AUTO 1</option><option value="2" selected>AUTO 2</option><option value="3">AUTO 3</option></select></div><div class="field"><div class="labelrow"><label>WYKONAWCA</label><button id="modeInfo" class="info" aria-label="Opis wybranego wykonawcy" title="Opis wybranego wykonawcy">i</button></div><select id="mode"><option value="auto">AUTO (zalecany)</option><option value="local">LOCAL</option><option value="research">RESEARCH</option><option value="codex">CODEX</option></select></div></div>
+  <div class="card"><strong>OSZCZĘDZANIE CODEX</strong><p class="muted">Pozwala ograniczyć użycie Codexa. Orchestrator najpierw używa lokalnego Qwen + Ollama + Aider. Po nieudanych próbach może zatrzymać zadanie zamiast automatycznie eskalować do Codexa.</p><label class="check"><input id="preferLocal" type="checkbox"> Preferuj LOCAL</label><label class="check"><input id="blockCodex" type="checkbox"> Nie eskaluj automatycznie do CODEX</label><p class="muted">Zalecane przy ograniczonym limicie Codexa.</p><strong id="codexBadge">CODEX: DOSTĘPNY</strong></div>
+  <div class="card"><strong>PLANOWANY WYKONAWCA</strong><div id="plannedExecutor">LOCAL<br>Qwen 2.5 Coder 7B + Ollama + Aider</div><div id="protectedInfo" class="muted"></div></div>
   <label class="check"><input id="dry" type="checkbox"> Dry-run</label><div class="field"><button id="run" class="primary">URUCHOM</button></div>
   <div class="actions"><button id="cancel">ANULUJ</button><button id="report">OSTATNI RAPORT</button><button id="history">HISTORIA</button><button id="showResearch">RESEARCH</button></div>
-  <div id="info" class="muted"></div><div id="warning" class="warning"></div><div id="error" class="error"></div><div id="status" class="card"><strong>Brak aktywnego runu</strong></div>
+  <div id="info" class="muted"></div><div id="warning" class="warning"></div><div id="error" class="error"></div><div id="status" class="card"><strong>Brak aktywnego runu</strong></div><div id="approval" class="actions" style="display:none"><button id="approveCodex" class="primary">URUCHOM PRZEZ CODEX</button><button id="finishTask">ZAKOŃCZ ZADANIE</button></div>
   <details open><summary>ŚRODOWISKO</summary><div id="health" class="card health"></div><button id="healthAgain">SPRAWDŹ PONOWNIE</button></details>
   <details open><summary>WERSJA</summary><div id="update" class="card">Kondzio AI — sprawdzanie wersji…</div><div class="actions"><button id="updateCheck">SPRAWDŹ AKTUALIZACJE</button><button id="updateNow" disabled>AKTUALIZUJ</button><button id="updateLater">PÓŹNIEJ</button></div></details>
   <details id="historyPanel"><summary>Ostatnie runy</summary><div id="historyList"></div></details>
@@ -115,12 +122,12 @@ function html(): string {
   const vscode=acquireVsCodeApi(),$=id=>document.getElementById(id);let runId,releaseUrl;
   const autonomyDescriptions=${JSON.stringify(AUTONOMY_DESCRIPTIONS)};
   const modeDescriptions=${JSON.stringify(MODE_DESCRIPTIONS)};
-  function updateInfo(){const a=autonomyDescriptions[$('autonomy').value],m=modeDescriptions[$('mode').value];$('autonomyInfo').title=a;$('autonomyInfo').setAttribute('aria-label',a);$('modeInfo').title=m;$('modeInfo').setAttribute('aria-label',m)}
+  function updateInfo(){const a=autonomyDescriptions[$('autonomy').value],m=modeDescriptions[$('mode').value];$('autonomyInfo').title=a;$('autonomyInfo').setAttribute('aria-label',a);$('modeInfo').title=m;$('modeInfo').setAttribute('aria-label',m);const mode=$('mode').value,prefer=$('preferLocal').checked,blocked=$('blockCodex').checked;$('plannedExecutor').innerHTML=mode==='research'?'RESEARCH<br>SearXNG + Qwen':mode==='codex'&&!prefer?'CODEX<br>To zadanie prawdopodobnie wymaga Codexa.':'LOCAL<br>Qwen 2.5 Coder 7B + Ollama + Aider';$('codexBadge').textContent=blocked?'CODEX: CHRONIONY':'CODEX: DOSTĘPNY';$('protectedInfo').textContent=blocked?'Codex nie zostanie uruchomiony automatycznie.':''}
   const send=command=>vscode.postMessage({command,runId});
-  $('run').onclick=()=>vscode.postMessage({command:'run',prompt:$('prompt').value,autonomy:Number($('autonomy').value),mode:$('mode').value,dryRun:$('dry').checked});
+  $('run').onclick=()=>vscode.postMessage({command:'run',prompt:$('prompt').value,autonomy:Number($('autonomy').value),mode:$('mode').value,dryRun:$('dry').checked,preferLocal:$('preferLocal').checked,blockCodexEscalation:$('blockCodex').checked});$('approveCodex').onclick=()=>send('approveCodex');$('finishTask').onclick=()=>send('finishTask');
   $('cancel').onclick=()=>send('cancel');$('report').onclick=()=>send('report');$('history').onclick=()=>send('history');
   $('showResearch').onclick=()=>{$('researchPanel').open=true;$('query').focus()};$('search').onclick=()=>vscode.postMessage({command:'research',query:$('query').value});
-  $('autonomy').onchange=updateInfo;$('mode').onchange=updateInfo;$('autonomyInfo').onclick=()=>{$('info').textContent=autonomyDescriptions[$('autonomy').value]};$('modeInfo').onclick=()=>{$('info').textContent=modeDescriptions[$('mode').value]};updateInfo();
+  $('autonomy').onchange=updateInfo;$('mode').onchange=updateInfo;$('preferLocal').onchange=updateInfo;$('blockCodex').onchange=updateInfo;$('autonomyInfo').onclick=()=>{$('info').textContent=autonomyDescriptions[$('autonomy').value]};$('modeInfo').onclick=()=>{$('info').textContent=modeDescriptions[$('mode').value]};updateInfo();
   $('healthAgain').onclick=()=>send('health');$('updateCheck').onclick=()=>send('updateCheck');$('updateNow').onclick=()=>releaseUrl&&vscode.postMessage({command:'updateNow',query:releaseUrl});$('updateLater').onclick=()=>send('updateLater');
   const esc=v=>String(v??'—');const label=(n,v)=>'<div><span class="muted">'+n+'</span><div class="value">'+esc(v)+'</div></div>';
   function status(v){runId=v.run_id||runId;const eta=v.initial_eta||{},files=Array.isArray(v.files_changed)?v.files_changed:[];$('status').innerHTML='<strong>'+esc(v.status)+'</strong><div class="progress"><div class="bar" style="width:'+esc(v.progress)+'%"></div></div><div class="grid">'+label('Run ID',v.run_id)+label('Etap',v.current_stage)+label('Agent',v.current_agent||v.agent)+label('Próba',v.current_attempt)+label('Research',v.research_status)+label('Testy',v.test_status)+label('Validation',v.validation_status)+label('Files changed',files.length)+label('Commit',v.commit_status)+label('Push',v.push_status)+label('MIN',eta.minimum)+' '+label('TYPICAL',eta.typical)+label('MAX',eta.maximum)+label('Elapsed',Math.round(v.elapsed_seconds||0)+' s')+label('Remaining',Math.round((v.remaining_eta||{}).seconds||0)+' s')+'</div><details><summary>Plan, ryzyka i kryteria</summary><pre>'+esc(JSON.stringify({plan:v.plan,risks:v.risks,acceptance_criteria:v.acceptance_criteria},null,2))+'</pre></details>'}
@@ -131,5 +138,6 @@ function html(): string {
   function checking(){const names=['Orchestrator','MCP','SearXNG','Ollama','Qwen','Aider','Codex CLI','Git','.NET SDK'];health({items:names.map(name=>({name,status:'CHECKING'}))})}
   function update(v){releaseUrl=v.releaseUrl;$('updateNow').disabled=v.status!=='available';$('update').textContent=v.status==='available'?'Kondzio AI v'+v.currentVersion+' · Dostępna aktualizacja v'+v.latestVersion:v.status==='current'?'Kondzio AI v'+v.currentVersion+' · Aktualne':'Kondzio AI v'+v.currentVersion+' · '+(v.detail||v.status)}
   addEventListener('message',e=>{const m=e.data;if(m.type==='status')status(m.value);if(m.type==='history')history(m.value);if(m.type==='research')research(m.value);if(m.type==='health')health(m.value);if(m.type==='healthChecking')checking();if(m.type==='update')update(m.value);if(m.type==='updateDismissed')$('update').textContent+=' · odłożono';if(m.type==='warning')$('warning').textContent=m.value;if(m.type==='error')$('error').textContent=m.value;if(m.type==='busy')$('run').disabled=m.value;if(m.type==='preset'){if(m.autonomy)$('autonomy').value=String(m.autonomy);if(m.section==='research'){$('researchPanel').open=true;$('query').focus()}else $('prompt').focus();updateInfo()}});checking();
+  addEventListener('message',e=>{const m=e.data;if(m.type==='status'){$('approval').style.display=m.value.status==='awaiting_codex_approval'?'grid':'none';if(m.value.status==='awaiting_codex_approval')$('codexBadge').textContent='CODEX: WYMAGA ZGODY'}});
   </script></body></html>`;
 }

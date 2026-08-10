@@ -14,6 +14,7 @@ Rozszerzenie jest wyłącznie warstwą UI. Routing, wykonanie, research, walidac
 - rzeczywisty health check Orchestratora, MCP, SearXNG, Ollama, Qwen, Aider, Codex CLI, Git i .NET SDK;
 - kontrola dostępności wymuszonego wykonawcy oraz ręczny/24-godzinny update check GitHub Releases;
 - obsługa tego samego backendu z panelu i z Codex Chat przez MCP.
+- oszczędzanie Codexa: preferowanie LOCAL, blokada automatycznej eskalacji, jawna zgoda i statystyki wykonawców.
 
 ## Wymagania
 
@@ -22,7 +23,7 @@ Windows, VS Code 1.100+, działający `E:\AI\Orchestrator` z Pythonem i MCP. Zad
 ## Szybki start
 
 1. W VS Code uruchom **Extensions: Install from VSIX...**.
-2. Wskaż `kondzio-ai-0.2.0.vsix`.
+2. Wskaż `kondzio-ai-0.2.1.vsix`.
 3. Wykonaj **Developer: Reload Window**.
 4. Otwórz ikonę **Kondzio AI** w Activity Bar.
 5. Wpisz zadanie, wybierz AUTO 1–3 i kliknij **URUCHOM**.

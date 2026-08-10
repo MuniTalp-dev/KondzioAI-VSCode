@@ -24,7 +24,7 @@ class FakeBackend implements OrchestratorBackend {
 test("uruchamia AUTO 1", async () => {
   const backend = new FakeBackend();
   await new OrchestratorController(backend).run("plan", 1);
-  assert.deepEqual(backend.calls[0], { tool: "orchestrator_run", args: { prompt: "plan", autonomy: 1, mode: "auto", dry_run: false } });
+  assert.deepEqual(backend.calls[0], { tool: "orchestrator_run", args: { prompt: "plan", autonomy: 1, mode: "auto", dry_run: false, prefer_local: false, block_codex_escalation: false, codex_approved: false } });
 });
 
 test("uruchamia AUTO 2", async () => {
@@ -37,6 +37,17 @@ test("przekazuje dry-run", async () => {
   const backend = new FakeBackend();
   await new OrchestratorController(backend).run("plan", 1, "auto", true);
   assert.equal(backend.calls[0].args.dry_run, true);
+});
+
+test("przekazuje ochronę CODEX", async () => {
+  const backend = new FakeBackend();
+  await new OrchestratorController(backend).run("test", 2, "auto", false, true, true);
+  assert.equal(backend.calls[0].args.prefer_local, true); assert.equal(backend.calls[0].args.block_codex_escalation, true);
+});
+
+test("awaiting_codex_approval nie jest błędem", () => {
+  assert.equal(statusBarText({ run_id: "r", status: "awaiting_codex_approval" }), "Kondzio AI: CODEX WYMAGA ZGODY");
+  assert.equal(progressFor("awaiting_codex_approval"), 100);
 });
 
 test("wywołuje status, historię, raport, research i cancel", async () => {

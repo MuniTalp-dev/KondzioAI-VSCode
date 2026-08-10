@@ -4,6 +4,18 @@ Wszystkie istotne zmiany projektu są dokumentowane w tym pliku. Format opiera s
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-08-10
+
+### Added
+
+- Tryb oszczędzania Codexa z niezależnymi opcjami preferowania LOCAL i blokowania automatycznej eskalacji.
+- Status `awaiting_codex_approval`, jawna zgoda na CODEX, planowany wykonawca i statystyki runu.
+- Metryki użycia LOCAL, RESEARCH i CODEX oraz informacja o oszczędzeniu Codexa.
+
+### Fixed
+
+- Przygotowanie kontekstu LOCAL dla testów: wykrywanie solution i projektów, jednoznaczny wybór istniejącego pliku testowego oraz odrzucanie zmian poza właściwym projektem.
+
 ## [0.2.0] - 2026-08-10
 
 ### Added

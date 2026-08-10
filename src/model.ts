@@ -5,7 +5,7 @@ export const FAILURE_STATES = new Set(["failed_executor", "failed_validation", "
 
 export function progressFor(stage = ""): number {
   const normalized = stage.toLowerCase();
-  if (["finished", "completed", "failed_executor", "failed_validation", "incomplete", "cancelled"].includes(normalized)) { return 100; }
+  if (["finished", "completed", "failed_executor", "failed_validation", "incomplete", "cancelled", "awaiting_codex_approval"].includes(normalized)) { return 100; }
   if (normalized.includes("escalat")) { return 55; }
   if (normalized.includes("research")) { return 25; }
   if (normalized.includes("plan")) { return 35; }
@@ -19,13 +19,16 @@ export function statusBarText(status?: StatusResult): string {
   if (!status) { return "Kondzio AI: IDLE"; }
   if (FAILURE_STATES.has(status.status)) { return "Kondzio AI: FAILED"; }
   if (status.status === "completed") { return "Kondzio AI: DONE"; }
+  if (status.status === "awaiting_codex_approval") { return "Kondzio AI: CODEX WYMAGA ZGODY"; }
   return `Kondzio AI: ${(status.current_agent ?? status.status ?? "IDLE").toUpperCase()}`;
 }
 
 export class OrchestratorController {
   constructor(private readonly backend: OrchestratorBackend) {}
-  run(prompt: string, autonomy: Autonomy = 2, mode: ExecutorMode = "auto", dryRun = false) {
-    const request: RunRequest = { prompt, autonomy, mode, dry_run: dryRun };
+  run(prompt: string, autonomy: Autonomy = 2, mode: ExecutorMode = "auto", dryRun = false,
+      preferLocal = false, blockCodexEscalation = false, codexApproved = false) {
+    const request: RunRequest = { prompt, autonomy, mode, dry_run: dryRun, prefer_local: preferLocal,
+                                  block_codex_escalation: blockCodexEscalation, codex_approved: codexApproved };
     return this.backend.call<StatusResult>("orchestrator_run", request as unknown as Record<string, unknown>);
   }
   status(runId?: string) { return this.backend.call<StatusResult>("orchestrator_status", runId ? { run_id: runId } : {}); }
