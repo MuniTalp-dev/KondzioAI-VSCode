@@ -4,6 +4,15 @@ Wszystkie istotne zmiany projektu są dokumentowane w tym pliku. Format opiera s
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-08-10
+
+### Fixed
+
+- Naprawiono zawieszający się UpdateService przez limit czasu 10 sekund i gwarantowane zakończenie stanu sprawdzania.
+- Dodano jawne stany aktualizacji: bezczynny, sprawdzanie, wersja aktualna, dostępna aktualizacja, błąd i przekroczenie czasu.
+- Dodano kanał Output `Kondzio AI` z diagnostyką komunikatu WebView, wywołania GitHub API, statusu HTTP, wersji i wyniku.
+- Dodano test zgodności komunikacji WebView z Extension Host, wykrywający rozjazd `message.type`.
+
 ## [0.2.1] - 2026-08-10
 
 ### Added

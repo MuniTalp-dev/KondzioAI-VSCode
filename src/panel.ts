@@ -3,8 +3,9 @@ import { ACTIVE_STATES, OrchestratorController, progressFor } from "./model";
 import { Autonomy, ExecutorMode, StatusResult } from "./types";
 import { UpdateService } from "./update";
 import { AUTONOMY_DESCRIPTIONS, MODE_DESCRIPTIONS } from "./descriptions";
+import { CHECK_FOR_UPDATES_MESSAGE, routeUpdateMessage, runUpdateCheck } from "./updateFlow";
 
-type PanelMessage = { command: string; prompt?: string; autonomy?: Autonomy; mode?: ExecutorMode; dryRun?: boolean; preferLocal?: boolean; blockCodexEscalation?: boolean; query?: string; runId?: string };
+type PanelMessage = { type?: string; command?: string; prompt?: string; autonomy?: Autonomy; mode?: ExecutorMode; dryRun?: boolean; preferLocal?: boolean; blockCodexEscalation?: boolean; query?: string; runId?: string };
 
 export class KondzioViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   static readonly viewType = "kondzioAi.main";
@@ -17,12 +18,13 @@ export class KondzioViewProvider implements vscode.WebviewViewProvider, vscode.D
               private readonly onStatus: (status?: StatusResult) => void,
               private readonly openMarkdown: (title: string, markdown: string) => Promise<void>,
               private readonly updates: UpdateService,
-              private readonly confirmUpdate: (url: string) => Promise<void>) {}
+              private readonly confirmUpdate: (url: string) => Promise<void>,
+              private readonly log: (message: string) => void = () => {}) {}
 
   resolveWebviewView(view: vscode.WebviewView): void {
     this.view = view;
     view.webview.options = { enableScripts: true };
-    view.webview.html = html();
+    view.webview.html = html(this.updates.installedVersion);
     view.webview.onDidReceiveMessage(message => void this.handle(message as PanelMessage));
     void this.refreshStatus();
     void this.checkHealth();
@@ -63,6 +65,11 @@ export class KondzioViewProvider implements vscode.WebviewViewProvider, vscode.D
 
   private async handle(message: PanelMessage): Promise<void> {
     try {
+      if (message.type === CHECK_FOR_UPDATES_MESSAGE) {
+        this.log(`WebView message: ${message.type}`);
+        await routeUpdateMessage(message, () => this.updates.check(true), result => this.post({ type: "updateState", value: result }), this.updates.installedVersion);
+        return;
+      }
       switch (message.command) {
         case "run": await this.run(message.prompt ?? "", message.autonomy ?? 2, message.mode ?? "auto", Boolean(message.dryRun), Boolean(message.preferLocal), Boolean(message.blockCodexEscalation)); break;
         case "approveCodex": if (this.lastRequest) { const r = this.lastRequest; await this.run(r.prompt, r.autonomy, "codex", r.dryRun, false, r.blockCodexEscalation, true); } break;
@@ -73,7 +80,6 @@ export class KondzioViewProvider implements vscode.WebviewViewProvider, vscode.D
         case "report": await this.showLastReport(); break;
         case "research": this.post({ type: "research", value: await this.controller.research(message.query?.trim() ?? "") }); break;
         case "health": await this.checkHealth(); break;
-        case "updateCheck": await this.checkUpdate(true); break;
         case "updateNow": if (message.query) { await this.confirmUpdate(message.query); } break;
         case "updateLater": this.post({ type: "updateDismissed" }); break;
       }
@@ -91,7 +97,9 @@ export class KondzioViewProvider implements vscode.WebviewViewProvider, vscode.D
     this.post({ type: "healthChecking" });
     this.post({ type: "health", value: await this.controller.health() });
   }
-  async checkUpdate(manual: boolean): Promise<void> { this.post({ type: "update", value: await this.updates.check(manual) }); }
+  async checkUpdate(manual: boolean): Promise<void> {
+    await runUpdateCheck(() => this.updates.check(manual), result => this.post({ type: "updateState", value: result }), this.updates.installedVersion);
+  }
   private startPolling(): void { this.stopPolling(); this.poll = setInterval(() => void this.refreshStatus(), 2000); }
   private stopPolling(): void { if (this.poll) { clearInterval(this.poll); this.poll = undefined; } }
   private error(error: unknown): void { this.post({ type: "error", value: error instanceof Error ? error.message : String(error) }); this.onStatus({ status: "failed_executor", run_id: this.currentRunId ?? "" }); }
@@ -99,7 +107,7 @@ export class KondzioViewProvider implements vscode.WebviewViewProvider, vscode.D
   dispose(): void { this.stopPolling(); }
 }
 
-function html(): string {
+export function html(installedVersion = ""): string {
   const nonce = Math.random().toString(36).slice(2);
   return `<!doctype html><html lang="pl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}';">
@@ -115,7 +123,7 @@ function html(): string {
   <div class="actions"><button id="cancel">ANULUJ</button><button id="report">OSTATNI RAPORT</button><button id="history">HISTORIA</button><button id="showResearch">RESEARCH</button></div>
   <div id="info" class="muted"></div><div id="warning" class="warning"></div><div id="error" class="error"></div><div id="status" class="card"><strong>Brak aktywnego runu</strong></div><div id="approval" class="actions" style="display:none"><button id="approveCodex" class="primary">URUCHOM PRZEZ CODEX</button><button id="finishTask">ZAKOŃCZ ZADANIE</button></div>
   <details open><summary>ŚRODOWISKO</summary><div id="health" class="card health"></div><button id="healthAgain">SPRAWDŹ PONOWNIE</button></details>
-  <details open><summary>WERSJA</summary><div id="update" class="card">Kondzio AI — sprawdzanie wersji…</div><div class="actions"><button id="updateCheck">SPRAWDŹ AKTUALIZACJE</button><button id="updateNow" disabled>AKTUALIZUJ</button><button id="updateLater">PÓŹNIEJ</button></div></details>
+  <details open><summary>WERSJA</summary><div id="update" class="card">Wersja zainstalowana: ${installedVersion}</div><div class="actions"><button id="updateCheck" type="button">SPRAWDŹ AKTUALIZACJE</button><button id="updateNow" type="button" disabled>AKTUALIZUJ</button><button id="updateLater" type="button">PÓŹNIEJ</button></div></details>
   <details id="historyPanel"><summary>Ostatnie runy</summary><div id="historyList"></div></details>
   <details id="researchPanel"><summary>Research</summary><div class="field"><label>Czego szukamy?</label><textarea id="query"></textarea></div><button id="search" class="primary">SZUKAJ</button><div id="researchResult"></div></details>
   <script nonce="${nonce}">
@@ -128,7 +136,7 @@ function html(): string {
   $('cancel').onclick=()=>send('cancel');$('report').onclick=()=>send('report');$('history').onclick=()=>send('history');
   $('showResearch').onclick=()=>{$('researchPanel').open=true;$('query').focus()};$('search').onclick=()=>vscode.postMessage({command:'research',query:$('query').value});
   $('autonomy').onchange=updateInfo;$('mode').onchange=updateInfo;$('preferLocal').onchange=updateInfo;$('blockCodex').onchange=updateInfo;$('autonomyInfo').onclick=()=>{$('info').textContent=autonomyDescriptions[$('autonomy').value]};$('modeInfo').onclick=()=>{$('info').textContent=modeDescriptions[$('mode').value]};updateInfo();
-  $('healthAgain').onclick=()=>send('health');$('updateCheck').onclick=()=>send('updateCheck');$('updateNow').onclick=()=>releaseUrl&&vscode.postMessage({command:'updateNow',query:releaseUrl});$('updateLater').onclick=()=>send('updateLater');
+  $('healthAgain').onclick=()=>send('health');$('updateCheck').onclick=()=>vscode.postMessage({type:${JSON.stringify(CHECK_FOR_UPDATES_MESSAGE)}});$('updateNow').onclick=()=>releaseUrl&&vscode.postMessage({command:'updateNow',query:releaseUrl});$('updateLater').onclick=()=>send('updateLater');
   const esc=v=>String(v??'—');const label=(n,v)=>'<div><span class="muted">'+n+'</span><div class="value">'+esc(v)+'</div></div>';
   function status(v){runId=v.run_id||runId;const eta=v.initial_eta||{},files=Array.isArray(v.files_changed)?v.files_changed:[];$('status').innerHTML='<strong>'+esc(v.status)+'</strong><div class="progress"><div class="bar" style="width:'+esc(v.progress)+'%"></div></div><div class="grid">'+label('Run ID',v.run_id)+label('Etap',v.current_stage)+label('Agent',v.current_agent||v.agent)+label('Próba',v.current_attempt)+label('Research',v.research_status)+label('Testy',v.test_status)+label('Validation',v.validation_status)+label('Files changed',files.length)+label('Commit',v.commit_status)+label('Push',v.push_status)+label('MIN',eta.minimum)+' '+label('TYPICAL',eta.typical)+label('MAX',eta.maximum)+label('Elapsed',Math.round(v.elapsed_seconds||0)+' s')+label('Remaining',Math.round((v.remaining_eta||{}).seconds||0)+' s')+'</div><details><summary>Plan, ryzyka i kryteria</summary><pre>'+esc(JSON.stringify({plan:v.plan,risks:v.risks,acceptance_criteria:v.acceptance_criteria},null,2))+'</pre></details>'}
   function runDate(x){if(x.started_at)return new Date(x.started_at).toLocaleString('pl-PL');const m=String(x.run_id||'').match(/^(\\d{4})(\\d{2})(\\d{2})_(\\d{2})(\\d{2})(\\d{2})/);return m?m[3]+'.'+m[2]+'.'+m[1]+' '+m[4]+':'+m[5]+':'+m[6]:'—'}
@@ -136,8 +144,8 @@ function html(): string {
   function research(v){$('researchPanel').open=true;const root=$('researchResult');root.innerHTML='';const h=document.createElement('pre');h.textContent='Provider: '+esc(v.provider)+'\nŹródła: '+esc(v.source_count)+'\n\nAnaliza Qwen / rekomendacja / ryzyka:\n'+esc(v.analysis);root.appendChild(h);(v.sources||[]).slice(0,10).forEach(s=>{const d=document.createElement('div');d.className='source';d.textContent=esc(s.score)+' · '+esc(s.title)+'\n'+esc(s.url);root.appendChild(d)})}
   function health(v){const root=$('health');root.innerHTML='';(v.items||[]).forEach(x=>{const name=document.createElement('div');name.textContent=x.name+(x.version?' · '+x.version:'');name.title=x.detail||'';const state=document.createElement('strong');state.className=x.status;state.textContent=x.status;state.title=x.detail||'';root.append(name,state)})}
   function checking(){const names=['Orchestrator','MCP','SearXNG','Ollama','Qwen','Aider','Codex CLI','Git','.NET SDK'];health({items:names.map(name=>({name,status:'CHECKING'}))})}
-  function update(v){releaseUrl=v.releaseUrl;$('updateNow').disabled=v.status!=='available';$('update').textContent=v.status==='available'?'Kondzio AI v'+v.currentVersion+' · Dostępna aktualizacja v'+v.latestVersion:v.status==='current'?'Kondzio AI v'+v.currentVersion+' · Aktualne':'Kondzio AI v'+v.currentVersion+' · '+(v.detail||v.status)}
-  addEventListener('message',e=>{const m=e.data;if(m.type==='status')status(m.value);if(m.type==='history')history(m.value);if(m.type==='research')research(m.value);if(m.type==='health')health(m.value);if(m.type==='healthChecking')checking();if(m.type==='update')update(m.value);if(m.type==='updateDismissed')$('update').textContent+=' · odłożono';if(m.type==='warning')$('warning').textContent=m.value;if(m.type==='error')$('error').textContent=m.value;if(m.type==='busy')$('run').disabled=m.value;if(m.type==='preset'){if(m.autonomy)$('autonomy').value=String(m.autonomy);if(m.section==='research'){$('researchPanel').open=true;$('query').focus()}else $('prompt').focus();updateInfo()}});checking();
+  function update(v){const isChecking=v.status==='checking';releaseUrl=v.releaseUrl;$('updateCheck').disabled=isChecking;$('updateNow').disabled=v.status!=='updateAvailable';$('update').textContent=isChecking?'Sprawdzanie aktualizacji...':v.status==='current'?'Wersja zainstalowana: '+v.currentVersion+'\nStatus: Aktualna':v.status==='updateAvailable'?'Dostępna aktualizacja: '+v.latestVersion:v.status==='timeout'?'Przekroczono czas sprawdzania aktualizacji.':v.status==='error'?'Nie udało się sprawdzić aktualizacji.':'Wersja zainstalowana: '+v.currentVersion}
+  addEventListener('message',e=>{const m=e.data;if(m.type==='status')status(m.value);if(m.type==='history')history(m.value);if(m.type==='research')research(m.value);if(m.type==='health')health(m.value);if(m.type==='healthChecking')checking();if(m.type==='updateState')update(m.value);if(m.type==='updateDismissed')$('update').textContent+=' · odłożono';if(m.type==='warning')$('warning').textContent=m.value;if(m.type==='error')$('error').textContent=m.value;if(m.type==='busy')$('run').disabled=m.value;if(m.type==='preset'){if(m.autonomy)$('autonomy').value=String(m.autonomy);if(m.section==='research'){$('researchPanel').open=true;$('query').focus()}else $('prompt').focus();updateInfo()}});checking();
   addEventListener('message',e=>{const m=e.data;if(m.type==='status'){$('approval').style.display=m.value.status==='awaiting_codex_approval'?'grid':'none';if(m.value.status==='awaiting_codex_approval')$('codexBadge').textContent='CODEX: WYMAGA ZGODY'}});
   </script></body></html>`;
 }

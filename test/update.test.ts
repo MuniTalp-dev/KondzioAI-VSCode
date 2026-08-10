@@ -18,7 +18,7 @@ test("update unavailable oznacza wersję aktualną", async () => {
 test("update available zwraca wersję i URL, ale niczego nie instaluje", async () => {
   let fetches = 0; const fetcher = async () => { fetches++; return { ok: true, status: 200, async json() { return { tag_name: "v0.3.0", html_url: "https://github.com/owner/repo/releases/tag/v0.3.0" }; } }; };
   const result = await new UpdateService("0.2.0", "owner/KondzioAI-VSCode", new Store(), fetcher).check(true);
-  assert.equal(result.status, "available"); assert.equal(result.latestVersion, "0.3.0"); assert.equal(fetches, 1);
+  assert.equal(result.status, "updateAvailable"); assert.equal(result.latestVersion, "v0.3.0"); assert.equal(fetches, 1);
   assert.equal("install" in result, false);
 });
 
@@ -35,10 +35,21 @@ test("automatyczne sprawdzenie odbywa się maksymalnie raz na 24 godziny", async
 
 test("brak konfiguracji repo nie wysyła zapytania", async () => {
   let called = false; const service = new UpdateService("0.2.0", "", new Store(), async () => { called = true; throw new Error(); });
-  assert.equal((await service.check(true)).status, "not_configured"); assert.equal(called, false);
+  assert.equal((await service.check(true)).status, "error"); assert.equal(called, false);
 });
 
 test("aktualizacja wymaga dokładnej zgody użytkownika", () => {
   assert.equal(updateApproved(undefined), false); assert.equal(updateApproved("Później"), false);
   assert.equal(updateApproved(UPDATE_CONFIRMATION), true);
+});
+
+test("update check kończy się stanem timeout i przekazuje AbortSignal", async () => {
+  let signal: AbortSignal | undefined;
+  const fetcher = (_input: string, init?: RequestInit) => new Promise<never>((_resolve, reject) => {
+    signal = init?.signal ?? undefined;
+    signal?.addEventListener("abort", () => reject(new Error("aborted")));
+  });
+  const result = await new UpdateService("0.2.1", "owner/repo", new Store(), fetcher, () => {}, 5).check(true);
+  assert.equal(result.status, "timeout");
+  assert.equal(signal?.aborted, true);
 });

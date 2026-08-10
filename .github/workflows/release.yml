@@ -11,8 +11,8 @@ jobs:
   release:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
@@ -30,7 +30,7 @@ jobs:
       - name: Calculate SHA-256
         shell: pwsh
         run: Get-FileHash *.vsix -Algorithm SHA256 | Format-List | Out-File -Encoding utf8 SHA256SUMS.txt
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: |
             *.vsix

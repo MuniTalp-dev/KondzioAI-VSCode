@@ -6,6 +6,7 @@ import { KondzioViewProvider } from "./panel";
 import { UPDATE_CONFIRMATION, UpdateService, updateApproved } from "./update";
 
 export function activate(context: vscode.ExtensionContext): void {
+  const output = vscode.window.createOutputChannel("Kondzio AI");
   const config = vscode.workspace.getConfiguration("kondzioAi");
   const root = config.get<string>("orchestratorRoot", "E:\\AI\\Orchestrator");
   const python = config.get<string>("pythonPath", join(root, ".venv", "Scripts", "python.exe"));
@@ -13,7 +14,11 @@ export function activate(context: vscode.ExtensionContext): void {
   const controller = new OrchestratorController(backend);
   const version = String(context.extension.packageJSON.version);
   const updateRepository = config.get<string>("updateRepository", "MuniTalp-dev/KondzioAI-VSCode");
-  const updates = new UpdateService(version, updateRepository, context.globalState);
+  const log = (message: string) => output.appendLine(`[Kondzio AI] ${message}`);
+  log("Extension activated");
+  log(`Version: ${version}`);
+  log(`updateRepository: ${updateRepository}`);
+  const updates = new UpdateService(version, updateRepository, context.globalState, fetch, log);
   const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 10);
   statusBar.command = "kondzioAi.newTask"; statusBar.text = "Kondzio AI: IDLE"; statusBar.show();
   const openMarkdown = async (title: string, markdown: string) => {
@@ -24,8 +29,8 @@ export function activate(context: vscode.ExtensionContext): void {
     const choice = await vscode.window.showWarningMessage("Otworzyć stronę GitHub Release? Rozszerzenie nie zainstaluje aktualizacji automatycznie.", { modal: true }, UPDATE_CONFIRMATION);
     if (updateApproved(choice)) { await vscode.env.openExternal(vscode.Uri.parse(url)); }
   };
-  const provider = new KondzioViewProvider(controller, status => { statusBar.text = statusBarText(status); }, openMarkdown, updates, confirmUpdate);
-  context.subscriptions.push(backend, provider, statusBar, vscode.window.registerWebviewViewProvider(KondzioViewProvider.viewType, provider, { webviewOptions: { retainContextWhenHidden: true } }));
+  const provider = new KondzioViewProvider(controller, status => { statusBar.text = statusBarText(status); }, openMarkdown, updates, confirmUpdate, log);
+  context.subscriptions.push(output, backend, provider, statusBar, vscode.window.registerWebviewViewProvider(KondzioViewProvider.viewType, provider, { webviewOptions: { retainContextWhenHidden: true } }));
   const reveal = async () => { await provider.reveal(); };
   const command = (id: string, action: () => unknown) => context.subscriptions.push(vscode.commands.registerCommand(id, action));
   command("kondzioAi.newTask", async () => { await reveal(); provider.preset(); });

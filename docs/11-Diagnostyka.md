@@ -35,6 +35,8 @@ Wersja 0.2.0 ma sekcję **ŚRODOWISKO** z dziewięcioma lekkimi kontrolami. Przy
 
 ## Logi i artefakty
 
+Kanał **Output → Kondzio AI** pokazuje pełny przepływ sprawdzania aktualizacji: aktywację i wersję rozszerzenia, `updateRepository`, komunikat `checkForUpdates`, start requestu, status HTTP, najnowszy release, wersję zainstalowaną oraz wynik `current`, `update` albo `error`/`timeout`. Kanał nie zapisuje tokenów ani sekretów.
+
 - runy: `E:\AI\Orchestrator\runs`;
 - logi MCP: `E:\AI\Orchestrator\mcp\logs`;
 - raport konkretnego runu: `runs\<RUN-ID>\report.md`;
