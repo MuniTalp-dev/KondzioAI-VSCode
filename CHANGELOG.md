@@ -4,6 +4,18 @@ Wszystkie istotne zmiany projektu są dokumentowane w tym pliku. Format opiera s
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-08-10
+
+### Changed
+
+- Ujednolicono kontrakt komunikatu sprawdzania aktualizacji pomiędzy WebView i Extension Host.
+- Pakowanie zawsze usuwa poprzedni katalog `dist` przed kompilacją i testami.
+
+### Fixed
+
+- Dodano diagnostykę każdego komunikatu WebView oraz logi kliknięcia i wysłania żądania aktualizacji.
+- Test integracyjny wykonuje rzeczywisty skrypt przycisku, przechwytuje `postMessage` i prowadzi komunikat przez handler do fałszywego UpdateService.
+
 ## [0.2.3] - 2026-08-10
 
 ### Changed

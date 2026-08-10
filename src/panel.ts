@@ -3,7 +3,7 @@ import { ACTIVE_STATES, OrchestratorController, progressFor } from "./model";
 import { Autonomy, ExecutorMode, StatusResult } from "./types";
 import { UpdateService } from "./update";
 import { AUTONOMY_DESCRIPTIONS, MODE_DESCRIPTIONS } from "./descriptions";
-import { CHECK_FOR_UPDATES_MESSAGE, routeUpdateMessage, runUpdateCheck } from "./updateFlow";
+import { routeUpdateMessage, runUpdateCheck, updateButtonScript, WebviewMessageType } from "./updateFlow";
 import { versionStatusPresentation } from "./versionStatus";
 
 type PanelMessage = { type?: string; command?: string; prompt?: string; autonomy?: Autonomy; mode?: ExecutorMode; dryRun?: boolean; preferLocal?: boolean; blockCodexEscalation?: boolean; query?: string; runId?: string };
@@ -65,9 +65,9 @@ export class KondzioViewProvider implements vscode.WebviewViewProvider, vscode.D
   }
 
   private async handle(message: PanelMessage): Promise<void> {
+    this.log(`WebView message received: ${JSON.stringify(message)}`);
     try {
-      if (message.type === CHECK_FOR_UPDATES_MESSAGE) {
-        this.log(`WebView message: ${message.type}`);
+      if (message.type === WebviewMessageType.CheckForUpdates) {
         await routeUpdateMessage(message, () => this.updates.check(true), result => this.post({ type: "updateState", value: result }), this.updates.installedVersion);
         return;
       }
@@ -138,7 +138,7 @@ export function html(installedVersion = ""): string {
   $('cancel').onclick=()=>send('cancel');$('report').onclick=()=>send('report');$('history').onclick=()=>send('history');
   $('showResearch').onclick=()=>{$('researchPanel').open=true;$('query').focus()};$('search').onclick=()=>vscode.postMessage({command:'research',query:$('query').value});
   $('autonomy').onchange=updateInfo;$('mode').onchange=updateInfo;$('preferLocal').onchange=updateInfo;$('blockCodex').onchange=updateInfo;$('autonomyInfo').onclick=()=>{$('info').textContent=autonomyDescriptions[$('autonomy').value]};$('modeInfo').onclick=()=>{$('info').textContent=modeDescriptions[$('mode').value]};updateInfo();
-  $('healthAgain').onclick=()=>send('health');$('updateCheck').onclick=()=>vscode.postMessage({type:${JSON.stringify(CHECK_FOR_UPDATES_MESSAGE)}});$('updateNow').onclick=()=>releaseUrl&&vscode.postMessage({command:'updateNow',query:releaseUrl});$('updateLater').onclick=()=>send('updateLater');
+  $('healthAgain').onclick=()=>send('health');${updateButtonScript()};$('updateNow').onclick=()=>releaseUrl&&vscode.postMessage({command:'updateNow',query:releaseUrl});$('updateLater').onclick=()=>send('updateLater');
   const esc=v=>String(v??'—');const label=(n,v)=>'<div><span class="muted">'+n+'</span><div class="value">'+esc(v)+'</div></div>';
   function status(v){runId=v.run_id||runId;const eta=v.initial_eta||{},files=Array.isArray(v.files_changed)?v.files_changed:[];$('status').innerHTML='<strong>'+esc(v.status)+'</strong><div class="progress"><div class="bar" style="width:'+esc(v.progress)+'%"></div></div><div class="grid">'+label('Run ID',v.run_id)+label('Etap',v.current_stage)+label('Agent',v.current_agent||v.agent)+label('Próba',v.current_attempt)+label('Research',v.research_status)+label('Testy',v.test_status)+label('Validation',v.validation_status)+label('Files changed',files.length)+label('Commit',v.commit_status)+label('Push',v.push_status)+label('MIN',eta.minimum)+' '+label('TYPICAL',eta.typical)+label('MAX',eta.maximum)+label('Elapsed',Math.round(v.elapsed_seconds||0)+' s')+label('Remaining',Math.round((v.remaining_eta||{}).seconds||0)+' s')+'</div><details><summary>Plan, ryzyka i kryteria</summary><pre>'+esc(JSON.stringify({plan:v.plan,risks:v.risks,acceptance_criteria:v.acceptance_criteria},null,2))+'</pre></details>'}
   function runDate(x){if(x.started_at)return new Date(x.started_at).toLocaleString('pl-PL');const m=String(x.run_id||'').match(/^(\\d{4})(\\d{2})(\\d{2})_(\\d{2})(\\d{2})(\\d{2})/);return m?m[3]+'.'+m[2]+'.'+m[1]+' '+m[4]+':'+m[5]+':'+m[6]:'—'}
