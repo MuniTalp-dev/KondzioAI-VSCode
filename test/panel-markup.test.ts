@@ -53,3 +53,10 @@ test("finalny HTML używa zewnętrznego skryptu i escapuje ścieżki, quotes ora
     moduleLoader._load = originalLoad;
   }
 });
+
+test("instalacja i reload wymagają osobnych kliknięć użytkownika", () => {
+  const script = readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8");
+  assert.match(markup, /data-command="installUpdate"/); assert.match(markup, /data-command="reloadWindow"/);
+  assert.match(script, /value\.status !== "updateAvailable"/); assert.match(script, /message\.type === "installSuccess"/);
+  assert.doesNotMatch(script, /workbench\.action\.reloadWindow/);
+});

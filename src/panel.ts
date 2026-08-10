@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { ACTIVE_STATES, OrchestratorController, progressFor } from "./model";
-import { Autonomy, ExecutorMode, StatusResult } from "./types";
+import { Autonomy, ExecutorMode, StatusResult, UpdateResult } from "./types";
+import { InstallResult, InstallStage } from "./updateInstaller";
 import { UpdateService } from "./update";
 import { AUTONOMY_DESCRIPTIONS, MODE_DESCRIPTIONS } from "./descriptions";
 import { runUpdateCheck } from "./updateFlow";
@@ -21,11 +22,14 @@ export class KondzioViewProvider implements vscode.WebviewViewProvider, vscode.D
   private currentRunId?: string;
   private lastRequest?: { prompt: string; autonomy: Autonomy; mode: ExecutorMode; dryRun: boolean; preferLocal: boolean; blockCodexEscalation: boolean };
   private messageSubscription?: vscode.Disposable;
+  private availableUpdate?: UpdateResult;
 
   constructor(private readonly controller: OrchestratorController, private readonly onStatus: (status?: StatusResult) => void,
     private readonly openMarkdown: (title: string, markdown: string) => Promise<void>, private readonly updates: UpdateService,
     private readonly confirmUpdate: (url: string) => Promise<void>, private readonly log: (message: string) => void = () => {},
-    private readonly extensionUri: vscode.Uri = vscode.Uri.file(__dirname)) {}
+    private readonly extensionUri: vscode.Uri = vscode.Uri.file(__dirname),
+    private readonly install: (release: UpdateResult, progress: (stage: InstallStage) => void) => Promise<InstallResult> = async () => { throw new Error("Instalator aktualizacji jest niedostępny."); },
+    private readonly reloadWindow: () => Promise<void> = async () => {}) {}
 
   resolveWebviewView(view: vscode.WebviewView): void {
     this.view = view;
@@ -75,6 +79,8 @@ export class KondzioViewProvider implements vscode.WebviewViewProvider, vscode.D
         case "research": this.post({ type: "research", value: await this.controller.research(message.query?.trim() ?? "") }); break;
         case "healthCheck": await this.checkHealth(); break;
         case "checkForUpdates": await this.checkUpdate(true); break;
+        case "installUpdate": await this.installAvailableUpdate(); break;
+        case "reloadWindow": await this.reloadWindow(); break;
         case "openRelease": if (message.url) { await this.confirmUpdate(message.url); } break;
         case "documentation": await vscode.commands.executeCommand("vscode.open", vscode.Uri.file(vscode.Uri.joinPath(vscode.Uri.file(__dirname), "..", "..", "docs", "README.md").fsPath)); break;
         case "choosePath": await this.choosePath(message.key); break;
@@ -90,10 +96,15 @@ export class KondzioViewProvider implements vscode.WebviewViewProvider, vscode.D
   private async restoreDefaults(): Promise<void> { const c = vscode.workspace.getConfiguration("kondzioAi"); for (const [key, value] of Object.entries(pathDefaults)) { await c.update(key, value, vscode.ConfigurationTarget.Global); } this.post({ type: "settings", value: pathDefaults }); }
   private publishStatus(status: StatusResult): void { if (status.run_id) { this.currentRunId = status.run_id; } this.post({ type: "status", value: { ...status, progress: progressFor(status.current_stage ?? status.status) } }); this.onStatus(status); if (!ACTIVE_STATES.has(status.status)) { this.stopPolling(); } }
   async checkHealth(): Promise<void> { this.post({ type: "healthChecking" }); this.post({ type: "health", value: await this.controller.health() }); }
-  async checkUpdate(manual: boolean): Promise<void> { await runUpdateCheck(() => this.updates.check(manual), result => this.post({ type: "updateState", value: result }), this.updates.installedVersion); }
+  async checkUpdate(manual: boolean): Promise<void> { await runUpdateCheck(() => this.updates.check(manual), result => { if (result.status === "updateAvailable") { this.availableUpdate = result; } this.post({ type: "updateState", value: result }); }, this.updates.installedVersion); }
+  private async installAvailableUpdate(): Promise<void> {
+    if (!this.availableUpdate) { throw new Error("Najpierw sprawdź dostępność aktualizacji."); }
+    const result = await this.install(this.availableUpdate, stage => this.post({ type: "installState", value: stage }));
+    this.post({ type: "installSuccess", value: `Zainstalowano v${result.version}` });
+  }
   private startPolling(): void { this.stopPolling(); this.poll = setInterval(() => void this.refreshStatus(), 2000); }
   private stopPolling(): void { if (this.poll) { clearInterval(this.poll); this.poll = undefined; } }
-  private error(error: unknown): void { this.post({ type: "error", value: error instanceof Error ? error.message : String(error) }); this.onStatus({ status: "failed_executor", run_id: this.currentRunId ?? "" }); }
+  private error(error: unknown): void { const detail = error instanceof Error ? `${error.message}${error.stack ? `\n${error.stack}` : ""}` : String(error); this.log(`Error: ${detail}`); this.post({ type: "error", value: error instanceof Error ? error.message : String(error) }); this.onStatus({ status: "failed_executor", run_id: this.currentRunId ?? "" }); }
   private post(value: unknown): void { void this.view?.webview.postMessage(value); }
   dispose(): void { this.stopPolling(); this.messageSubscription?.dispose(); this.view = undefined; }
 }
@@ -114,7 +125,7 @@ export function html(installedVersion = "", settings: Record<string, string> = p
   <div id="warning" class="warning" role="status" aria-live="polite"></div><div id="error" class="error" role="alert" aria-live="assertive"></div><div id="status" class="card" aria-live="polite"><strong>Brak aktywnego zadania</strong></div>
   <div id="approval" class="actions hidden"><button class="primary" data-command="approveCodex">URUCHOM PRZEZ CODEX</button><button data-command="finishTask">ZAKOŃCZ ZADANIE</button></div>
   <details open><summary>STAN NARZĘDZI</summary><div id="health" class="card health" aria-live="polite"></div><button data-command="healthCheck">↻ SPRAWDŹ STAN</button></details>
-  <details open><summary>WERSJA</summary><div class="card"><strong>Kondzio AI ${escapeHtmlAttribute(installedVersion)}</strong><div id="versionStatus" class="status-chip" role="status" aria-live="polite">? NIE SPRAWDZONO</div></div><button id="openRelease" class="hidden" data-command="openRelease">OTWÓRZ WYDANIE</button></details>
+  <details open><summary>WERSJA</summary><div class="card"><strong>Kondzio AI ${escapeHtmlAttribute(installedVersion)}</strong><div id="versionStatus" class="status-chip" role="status" aria-live="polite">? NIE SPRAWDZONO</div><div id="installStatus" class="muted" role="status" aria-live="polite"></div></div><button id="installUpdate" class="primary hidden" data-command="installUpdate">AKTUALIZUJ</button><button id="reloadWindow" class="primary hidden" data-command="reloadWindow">PRZEŁADUJ VS CODE</button><button id="openRelease" class="hidden" data-command="openRelease">OTWÓRZ WYDANIE</button></details>
   <details id="historyPanel"><summary>HISTORIA ZADAŃ</summary><div id="historyList">Brak wcześniejszych zadań.</div></details>
   <details id="researchPanel"><summary>RESEARCH <span class="muted">SearXNG + lokalny Qwen</span></summary><div class="field"><label for="query">Czego szukamy?</label><textarea id="query"></textarea></div><button data-command="research">🔎 SZUKAJ</button><div id="researchResult"></div></details>
   <details><summary>USTAWIENIA</summary><div class="paths">${Object.entries(settings).map(([key,value])=>`<div class="path"><label for="${key}">${({orchestratorPath:"Orchestrator",researchLabPath:"ResearchLab",sandboxPath:"Sandbox",projectsRoot:"Projekty"} as Record<string,string>)[key]}</label><input id="${key}" value="${escapeHtmlAttribute(value)}"><button data-command="choosePath" data-key="${key}">WYBIERZ</button></div>`).join("")}</div><div class="actions"><button data-command="saveSettings">ZAPISZ USTAWIENIA</button><button class="tertiary" data-command="restoreDefaults">PRZYWRÓĆ DOMYŚLNE</button></div><div id="settingsStatus" aria-live="polite"></div></details>

@@ -4,6 +4,17 @@ Wszystkie istotne zmiany projektu są dokumentowane w tym pliku. Format opiera s
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-08-10
+
+### Added
+
+- Rozdzielono diagnostykę Codex IDE i opcjonalnego Codex CLI, dodając wykrywanie przez PATH, `where.exe` oraz własną ścieżkę.
+- Dodano aktualizację jednym kliknięciem wyłącznie z GitHub Releases `MuniTalp-dev/KondzioAI-VSCode`, z weryfikacją SHA-256, instalacją przez oficjalne VS Code CLI i jawnym przeładowaniem okna.
+
+### Tests
+
+- Dodano testy wykrywania Codex CLI, assetów release, sum kontrolnych, sukcesu i błędów instalacji oraz wymaganych kliknięć.
+
 ## [0.3.2] - 2026-08-10
 
 ### Fixed

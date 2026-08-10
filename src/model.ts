@@ -24,7 +24,7 @@ export function statusBarText(status?: StatusResult): string {
 }
 
 export class OrchestratorController {
-  constructor(private readonly backend: OrchestratorBackend) {}
+  constructor(private readonly backend: OrchestratorBackend, private readonly healthTransform: (health: HealthResult) => Promise<HealthResult> = async health => health) {}
   run(prompt: string, autonomy: Autonomy = 2, mode: ExecutorMode = "auto", dryRun = false,
       preferLocal = false, blockCodexEscalation = false, codexApproved = false,
       sandboxPath?: string, projectsRoot?: string) {
@@ -39,7 +39,7 @@ export class OrchestratorController {
   lastReport() { return this.backend.call<{ run_id?: string; report: string }>("orchestrator_last_report"); }
   research(query: string) { return this.backend.call<Record<string, unknown>>("orchestrator_research", { query }); }
   cancel(runId?: string) { return this.backend.call<Record<string, unknown>>("orchestrator_cancel", runId ? { run_id: runId } : {}); }
-  health() { return this.backend.call<HealthResult>("extension_health"); }
+  async health() { return this.healthTransform(await this.backend.call<HealthResult>("extension_health")); }
   async preflight(mode: ExecutorMode): Promise<{ health: HealthResult; warnings: string[] }> {
     const health = await this.health();
     const byName = new Map(health.items.map(value => [value.name, value]));
@@ -48,7 +48,7 @@ export class OrchestratorController {
       const missing = unavailable(["Ollama", "Qwen", "Aider"]);
       if (missing.length) { throw new Error(`LOCAL jest niedostępny: ${missing.join(", ")}. Wybierz AUTO albo napraw środowisko.`); }
     }
-    if (mode === "codex" && unavailable(["Codex CLI"]).length) {
+    if (mode === "codex" && byName.get("Codex CLI")?.status !== "OK") {
       throw new Error("CODEX jest niedostępny. Wybierz AUTO albo napraw Codex CLI.");
     }
     const warnings: string[] = [];
