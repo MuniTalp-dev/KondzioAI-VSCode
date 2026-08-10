@@ -4,6 +4,27 @@ Wszystkie istotne zmiany projektu są dokumentowane w tym pliku. Format opiera s
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-08-10
+
+### Fixed
+
+- Przekazywanie `sandboxPath` i `projectsRoot` z panelu do backendu oraz rozwiązywanie właściwego repozytorium dla realnych runów LOCAL.
+
+### Tests
+
+- Potwierdzono realny run LOCAL: status `completed`, jeden zmieniony plik, `dotnet test` 5/5, spełnione kryteria akceptacji i zero wykonań CODEX.
+
+## [0.3.1] - 2026-08-10
+
+### Fixed
+
+- Naprawiono błąd składni klienta WebView wywołany przez surowy znak nowej linii w literałach JavaScript.
+- Przeniesiono klienta panelu do `media/webview.js`, dodano CSP/nonce, bezpieczne escapowanie danych oraz raportowanie błędów klienta.
+
+### Tests
+
+- Dodano kontrolę składni zewnętrznego skryptu oraz regresje dla ścieżek Windows, cudzysłowów, nowych linii i sekwencji `</script>`.
+
 ## [0.3.0] - 2026-08-10
 
 ### Added

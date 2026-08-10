@@ -30,7 +30,7 @@ export function activate(context: vscode.ExtensionContext): void {
     const choice = await vscode.window.showWarningMessage("Otworzyć stronę GitHub Release? Rozszerzenie nie zainstaluje aktualizacji automatycznie.", { modal: true }, UPDATE_CONFIRMATION);
     if (updateApproved(choice)) { await vscode.env.openExternal(vscode.Uri.parse(url)); }
   };
-  const provider = new KondzioViewProvider(controller, status => { statusBar.text = statusBarText(status); }, openMarkdown, updates, confirmUpdate, log);
+  const provider = new KondzioViewProvider(controller, status => { statusBar.text = statusBarText(status); }, openMarkdown, updates, confirmUpdate, log, context.extensionUri);
   context.subscriptions.push(output, backend, provider, statusBar, vscode.window.registerWebviewViewProvider(KondzioViewProvider.viewType, provider, { webviewOptions: { retainContextWhenHidden: true } }));
   const reveal = async () => { await provider.reveal(); };
   const command = (id: string, action: () => unknown) => context.subscriptions.push(vscode.commands.registerCommand(id, action));

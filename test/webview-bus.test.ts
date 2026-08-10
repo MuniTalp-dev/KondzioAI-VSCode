@@ -13,7 +13,7 @@ for (const command of ["run", "healthCheck", "research", "history", "checkForUpd
   });
 }
 
-test("klient loguje i zgłasza inicjalizację", () => {
+test("starszy helper klienta pozostaje składniowo poprawny", () => {
   const script = webviewClientScript();
   assert.match(script, new RegExp(WEBVIEW_CLIENT_INITIALIZED.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(script, /clientInitialized/);

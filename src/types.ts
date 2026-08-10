@@ -1,7 +1,7 @@
 export type Autonomy = 1 | 2 | 3;
 export type ExecutorMode = "auto" | "local" | "research" | "codex";
 
-export interface RunRequest { prompt: string; autonomy: Autonomy; mode: ExecutorMode; dry_run: boolean; prefer_local: boolean; block_codex_escalation: boolean; codex_approved?: boolean; }
+export interface RunRequest { prompt: string; autonomy: Autonomy; mode: ExecutorMode; dry_run: boolean; prefer_local: boolean; block_codex_escalation: boolean; codex_approved?: boolean; sandbox_path?: string; projects_root?: string; }
 export interface RunSummary { run_id: string; prompt?: string; status?: string; autonomy?: number; agent?: string; eta_minutes?: number; actual_minutes?: number; started_at?: string; }
 export interface StatusResult {
   run_id: string; status: string; started_at?: string; elapsed_seconds?: number; current_stage?: string;
