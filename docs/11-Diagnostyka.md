@@ -37,6 +37,10 @@ Wersja 0.2.0 ma sekcję **ŚRODOWISKO** z dziewięcioma lekkimi kontrolami. Przy
 
 ## Logi i artefakty
 
+## Release / Git
+
+Zakładka Diagnostyka pokazuje repozytorium rozszerzenia, branch, origin, stan Git, wersję pakietu oraz lokalny i zdalny tag. **SPRAWDŹ GOTOWOŚĆ** wykonuje checklistę wraz z testami, kompilacją i pakowaniem. **DRY-RUN WYDANIA** nie wykonuje operacji Git. **PEŁNE WYDANIE** wymaga osobnego modalnego potwierdzenia „ZATWIERDZAM WYDANIE”; nie używa force i działa wyłącznie w skonfigurowanym repozytorium `kondzio-ai`.
+
 Kanał **Output → Kondzio AI** pokazuje pełny przepływ sprawdzania aktualizacji: aktywację i wersję rozszerzenia, `updateRepository`, komunikat `checkForUpdates`, start requestu, status HTTP, najnowszy release, wersję zainstalowaną oraz wynik `current`, `update` albo `error`/`timeout`. Kanał nie zapisuje tokenów ani sekretów.
 
 - runy: `E:\AI\Orchestrator\runs`;

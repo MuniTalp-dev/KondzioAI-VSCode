@@ -7,6 +7,7 @@ import { UPDATE_CONFIRMATION, UpdateService, updateApproved } from "./update";
 import { checkForUpdatesCommand } from "./updateCommand";
 import { enrichCodexHealth } from "./codexHealth";
 import { installUpdate } from "./updateInstaller";
+import { ReleaseService } from "./releaseService";
 
 export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel("Kondzio AI");
@@ -15,6 +16,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const python = config.get<string>("pythonPath", join(root, ".venv", "Scripts", "python.exe"));
   const backend = new McpBackend(python, root, context.asAbsolutePath(join("python", "mcp_bridge.py")));
   const codexCliPath = config.get<string>("codexCliPath", "");
+  const releaseRepositoryPath = config.get<string>("extensionRepositoryPath", "E:\\AI\\Orchestrator\\vscode-extension");
   const controller = new OrchestratorController(backend, health => enrichCodexHealth(health,
     Boolean(vscode.extensions.getExtension("openai.chatgpt") ?? vscode.extensions.getExtension("openai.codex")), codexCliPath));
   const version = String(context.extension.packageJSON.version);
@@ -36,7 +38,7 @@ export function activate(context: vscode.ExtensionContext): void {
   };
   const provider = new KondzioViewProvider(controller, status => { statusBar.text = statusBarText(status); }, openMarkdown, updates, confirmUpdate, log, context.extensionUri,
     async (release, progress) => installUpdate(release, progress, log),
-    async () => { await vscode.commands.executeCommand("workbench.action.reloadWindow"); });
+    async () => { await vscode.commands.executeCommand("workbench.action.reloadWindow"); }, new ReleaseService(releaseRepositoryPath));
   context.subscriptions.push(output, backend, provider, statusBar, vscode.window.registerWebviewViewProvider(KondzioViewProvider.viewType, provider, { webviewOptions: { retainContextWhenHidden: true } }));
   const reveal = async () => { await provider.reveal(); };
   const command = (id: string, action: () => unknown) => context.subscriptions.push(vscode.commands.registerCommand(id, action));

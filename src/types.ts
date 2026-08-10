@@ -23,4 +23,4 @@ export interface OrchestratorBackend {
 export type HealthState = "CHECKING" | "OK" | "WARNING" | "ERROR";
 export interface HealthItem { name: string; status: HealthState; version?: string; detail?: string; }
 export interface HealthResult { checked_at: string; items: HealthItem[]; }
-export interface UpdateResult { status: "idle" | "checking" | "current" | "updateAvailable" | "error" | "timeout"; currentVersion: string; latestVersion?: string; releaseUrl?: string; detail?: string; vsixName?: string; vsixUrl?: string; checksumUrl?: string; }
+export interface UpdateResult { status: "idle" | "checking" | "current" | "updateAvailable" | "error" | "timeout"; currentVersion: string; latestVersion?: string; releaseUrl?: string; releaseNotes?: string; publishedAt?: string; detail?: string; vsixName?: string; vsixUrl?: string; checksumUrl?: string; }

@@ -2,7 +2,7 @@
   "name": "kondzio-ai",
   "displayName": "Kondzio AI",
   "description": "Interfejs VS Code dla lokalnego Kondzio AI Orchestrator.",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "publisher": "kondzio-studio",
   "license": "UNLICENSED",
   "engines": { "vscode": "^1.100.0" },
@@ -47,7 +47,8 @@
         "kondzioAi.projectsRoot": { "type": "string", "default": "C:\\Projekty\\VCode", "description": "Główny katalog projektów." },
         "kondzioAi.orchestratorRoot": { "type": "string", "default": "E:\\AI\\Orchestrator", "description": "Starsza nazwa ustawienia Orchestratora." },
         "kondzioAi.pythonPath": { "type": "string", "default": "E:\\AI\\Orchestrator\\.venv\\Scripts\\python.exe", "description": "Interpreter Python Orchestratora." },
-        "kondzioAi.codexCliPath": { "type": "string", "default": "", "description": "Opcjonalna pełna ścieżka do Codex CLI. Puste ustawienie używa PATH i where.exe na Windows." }
+        "kondzioAi.codexCliPath": { "type": "string", "default": "", "description": "Opcjonalna pełna ścieżka do Codex CLI. Puste ustawienie używa PATH i where.exe na Windows." },
+        "kondzioAi.extensionRepositoryPath": { "type": "string", "default": "E:\\AI\\Orchestrator\\vscode-extension", "description": "Repozytorium rozszerzenia do bezpiecznej automatyzacji Release / Git." }
       }
     }
   },

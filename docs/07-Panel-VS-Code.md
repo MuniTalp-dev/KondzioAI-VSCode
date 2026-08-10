@@ -7,10 +7,11 @@ Panel otwiera się ikoną **Kondzio AI** w Activity Bar albo komendą **Kondzio 
 - **Co mam zrobić?** — wielowierszowy opis celu, ograniczeń i oczekiwanego wyniku.
 - **AUTONOMIA** — AUTO 1, AUTO 2 lub AUTO 3; domyślnie AUTO 2.
 - **WYKONAWCA** — AUTO, LOCAL, RESEARCH albo CODEX; domyślnie AUTO.
-- **TRYB PRÓBNY** — tworzy plan i analizę bez zmiany plików (`dry-run`).
+- **TRYB PRÓBNY** — dostępny switch tworzący plan i analizę bez zmiany plików.
+- **OSZCZĘDZAJ CODEX** — jednym switchem preferuje LOCAL i blokuje automatyczną eskalację do CODEX.
 - **URUCHOM ZADANIE** — wysyła zadanie do `orchestrator_run`.
 
-## Przyciski operacyjne
+## Zakładki i akcje
 
 - **ANULUJ** wywołuje `orchestrator_cancel` dla aktywnego runu.
 - **OSTATNI RAPORT** otwiera wynik jako dokument Markdown w VS Code.
@@ -35,7 +36,7 @@ Przed wymuszonym LOCAL panel blokuje run, jeśli brakuje Ollama, Qwen albo Aider
 
 ## Aktualizacje
 
-Sekcja **WERSJA** pokazuje bieżącą wersję i czytelny status GitHub Releases. Przycisk panelu i komenda **Kondzio AI: Check for Updates** korzystają z tego samego `UpdateService`. **OTWÓRZ WYDANIE** wymaga modalnej zgody i niczego nie instaluje.
+Wersja i symbol aktualności są wyłącznie w nagłówku. Przy dostępnej aktualizacji **CHANGELOG** pokazuje release notes w panelu, a **AKTUALIZUJ** uruchamia istniejący bezpieczny updater.
 
 Panel używa jednego delegowanego mechanizmu komunikacji dla wszystkich przycisków. Układ nie ma poziomego przewijania przy szerokościach 260, 320, 400 i 500 px; wszystkie akcje mają widoczny focus i etykiety dostępności, a statusy korzystają z `aria-live`.
 

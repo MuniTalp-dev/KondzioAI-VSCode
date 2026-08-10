@@ -14,10 +14,11 @@ test("panel jest responsywny od 260 do 500 px bez horizontal overflow", () => {
 });
 
 test("panel ma RAL 6018, focus, aria-live i semantyczne przyciski", () => {
-  assert.match(markup, /--kondzio-accent:#57A639/);
+  assert.match(markup, /--kondzio-accent:#61993b/);
   assert.match(markup, /:focus-visible/);
   assert.ok((markup.match(/aria-live=/g) ?? []).length >= 4);
-  for (const command of ["run", "healthCheck", "checkForUpdates", "research", "history", "documentation"]) assert.match(markup, new RegExp(`data-command="${command}"`));
+  for (const command of ["run", "healthCheck", "research", "documentation"]) assert.match(markup, new RegExp(`data-command="${command}"`));
+  assert.match(readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8"), /dataset\.command = "checkForUpdates"/);
 });
 
 test("zewnętrzny klient WebView ma poprawną składnię i bezpieczną inicjalizację", () => {
@@ -57,6 +58,51 @@ test("finalny HTML używa zewnętrznego skryptu i escapuje ścieżki, quotes ora
 test("instalacja i reload wymagają osobnych kliknięć użytkownika", () => {
   const script = readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8");
   assert.match(markup, /data-command="installUpdate"/); assert.match(markup, /data-command="reloadWindow"/);
-  assert.match(script, /value\.status !== "updateAvailable"/); assert.match(script, /message\.type === "installSuccess"/);
+  assert.match(script, /updateActions.*hidden/); assert.match(script, /message\.type === "installSuccess"/);
   assert.doesNotMatch(script, /workbench\.action\.reloadWindow/);
+});
+
+test("0.4.0 ma kompaktowy header, macierz 2x2, switche i zakładki", () => {
+  const script = readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8");
+  assert.match(markup, /K·AI[\s\S]*Kondzio AI[\s\S]*versionStatus/);
+  assert.match(markup, /@media\(min-width:320px\)/);
+  assert.equal((markup.match(/role="switch"/g) ?? []).length, 2);
+  assert.match(markup, /aria-checked="false"/);
+  assert.equal((markup.match(/role="tab"/g) ?? []).length, 5);
+  assert.equal((markup.match(/role="tabpanel"/g) ?? []).length, 5);
+  assert.match(script, /preferLocal: switchOn\("saveCodex"\)/);
+  assert.match(script, /blockCodexEscalation: switchOn\("saveCodex"\)/);
+  assert.match(script, /historyLimit = 5/);
+  assert.match(script, /CODEX: WYMAGA ZGODY/);
+});
+
+test("status aktualizacji pokazuje sam symbol i chowa akcje bez update", () => {
+  const script = readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8");
+  assert.match(script, /value\.status === "current" \? "✓"/);
+  assert.match(script, /Oprogramowanie aktualne/);
+  assert.match(script, /updateActions.*toggle\("hidden", !available\)/);
+  assert.match(markup, /data-command="showChangelog"/);
+  assert.match(markup, /id="releaseNotes"/);
+});
+
+test("nazwy narzędzi i statusy mają wspólne pionowe wyrównanie flex", () => {
+  const script = readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8");
+  assert.match(markup, /\.tool-row\{display:flex;align-items:center;justify-content:space-between/);
+  assert.match(markup, /\.tool-status\{display:inline-flex;align-items:center/);
+  assert.match(markup, /\.tool-name\{min-width:0;overflow-wrap:anywhere/);
+  assert.match(markup, /\.tool-status[^}]*margin:0/);
+  assert.doesNotMatch(markup, /\.tool-status[^}]*translateY/);
+  assert.match(script, /row\.className = "tool-row"/);
+  assert.match(script, /status\.className = `tool-status \$\{state\}`/);
+  assert.match(script, /row\.append\(name, status\)/);
+});
+
+test("Diagnostyka ma bezpieczną automatyzację Release / Git z potwierdzeniem", () => {
+  const script = readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8");
+  for (const command of ["releaseReadiness", "releaseDryRun", "prepareFullRelease", "confirmFullRelease"]) assert.match(script, new RegExp(`data-command=\\"${command}\\"`));
+  assert.match(script, /ZATWIERDZAM WYDANIE/);
+  assert.match(script, /push main\\n- push tag/);
+  assert.match(script, /releaseConfirmModal.*hidden/);
+  assert.match(markup, /randomUUID/);
+  assert.match(markup, /Brak ważnego potwierdzenia wydania/);
 });

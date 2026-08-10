@@ -54,7 +54,7 @@ export class UpdateService {
       const response = await this.fetcher(endpoint, { headers: { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" }, signal: controller.signal });
       this.log(`GitHub HTTP status: ${response.status}`);
       if (!response.ok) { this.log("Update result: error"); return { status: "error", currentVersion: this.currentVersion, detail: `GitHub API zwróciło HTTP ${response.status}.` }; }
-      const data = await response.json() as { tag_name?: unknown; html_url?: unknown; assets?: Array<{ name?: unknown; browser_download_url?: unknown }> };
+      const data = await response.json() as { tag_name?: unknown; html_url?: unknown; body?: unknown; published_at?: unknown; assets?: Array<{ name?: unknown; browser_download_url?: unknown }> };
       if (typeof data.tag_name !== "string" || typeof data.html_url !== "string") {
         this.log("Update result: error");
         return { status: "error", currentVersion: this.currentVersion, detail: "Nieprawidłowa odpowiedź GitHub Releases." };
@@ -70,6 +70,7 @@ export class UpdateService {
       const checksum = assets.find(asset => asset.name === "SHA256SUMS.txt" && typeof asset.browser_download_url === "string");
       return updateAvailable
         ? { status: "updateAvailable", currentVersion: this.currentVersion, latestVersion: data.tag_name, releaseUrl: data.html_url,
+            releaseNotes: typeof data.body === "string" ? data.body : "Brak informacji o wydaniu.", publishedAt: typeof data.published_at === "string" ? data.published_at : undefined,
             vsixName, vsixUrl: vsix?.browser_download_url as string | undefined, checksumUrl: checksum?.browser_download_url as string | undefined }
         : { status: "current", currentVersion: this.currentVersion, latestVersion: data.tag_name };
     } catch (error) {

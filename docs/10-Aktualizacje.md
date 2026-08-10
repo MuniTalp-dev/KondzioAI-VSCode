@@ -4,10 +4,10 @@ Wersja 0.3.0 sprawdza najnowszy GitHub Release ręcznie albo automatycznie maksy
 
 Przycisk panelu i awaryjna komenda **Kondzio AI: Check for Updates** wywołują ten sam `UpdateService` w Extension Host.
 
-Panel pokazuje wersję zainstalowaną, najnowszą wiarygodnie sprawdzoną wersję i jeden wyraźny status:
+Nagłówek pokazuje wersję zainstalowaną i kompaktowy symbol statusu:
 
-- `✓ OPROGRAMOWANIE AKTUALNE` po potwierdzeniu zgodności wersji;
-- `⚠ DOSTĘPNA AKTUALIZACJA vX.Y.Z` wraz z przyciskiem otwarcia wydania;
+- zielone `✓` po potwierdzeniu zgodności wersji;
+- ostrzeżenie wraz z przyciskami **CHANGELOG** i **AKTUALIZUJ**, gdy istnieje nowsza wersja;
 - status sprawdzania, błędu albo przekroczenia czasu.
 
 Zielony status nie pojawia się, jeżeli najnowszej wersji nie udało się wiarygodnie sprawdzić. Rozszerzenie nie pobiera ani nie instaluje paczki bez zgody.

@@ -4,6 +4,30 @@ Wszystkie istotne zmiany projektu są dokumentowane w tym pliku. Format opiera s
 
 ## [Unreleased]
 
+### Added
+
+- Dodano w Diagnostyce bezpieczną sekcję Release / Git z checklistą gotowości, dry-runem, logiem stanów i modalnym potwierdzeniem pełnego wydania.
+
+### Security
+
+- Automatyzacja działa wyłącznie dla repozytorium pakietu `kondzio-ai`, nie nadpisuje tagów, nie używa force i wymaga jednorazowego tokenu potwierdzenia przed pushami.
+
+## [0.4.0] - 2026-08-10
+
+### Added
+
+- Compact Workflow UI: nagłówek w jednym wierszu, spójna macierz ustawień 2×2, dostępne switche, dynamiczne podsumowanie i nawigacja zakładkowa.
+- Wewnętrzny changelog najnowszego GitHub Release z wersją, datą, release notes i istniejącą aktualizacją jednym kliknięciem.
+
+### Changed
+
+- Diagnostyka, historia, raport i Research korzystają z kompaktowych zakładek; status wersji znajduje się wyłącznie w nagłówku.
+- Jeden przełącznik „Oszczędzaj Codex” steruje istniejącymi flagami `prefer_local` i `block_codex_escalation`.
+
+### Tests
+
+- Dodano regresje nagłówka, macierzy, switchy, zakładek, podsumowania, responsywności, changelogu, updatera i centralnego message busa.
+
 ## [0.3.3] - 2026-08-10
 
 ### Added

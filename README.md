@@ -23,7 +23,7 @@ Windows, VS Code 1.100+, działający `E:\AI\Orchestrator` z Pythonem i MCP. Zad
 ## Szybki start
 
 1. W VS Code uruchom **Extensions: Install from VSIX...**.
-2. Wskaż `kondzio-ai-0.3.0.vsix`.
+2. Wskaż `kondzio-ai-0.4.0.vsix`.
 3. Wykonaj **Developer: Reload Window**.
 4. Otwórz ikonę **Kondzio AI** w Activity Bar.
 5. Wpisz zadanie, wybierz AUTO 1–3 i kliknij **URUCHOM ZADANIE**.
@@ -54,7 +54,7 @@ UI nie wykonuje samodzielnie operacji Git. Dry-run nie może zmieniać repozytor
 
 ## Aktualizacje
 
-Sekcja **WERSJA** pokazuje wersję zainstalowaną i najnowszą wersję z GitHub Releases. Zielony status potwierdza aktualność wyłącznie po wiarygodnym sprawdzeniu; osobne komunikaty informują o dostępnej aktualizacji, trwającym sprawdzaniu, błędzie albo przekroczeniu czasu.
+Kompaktowy nagłówek pokazuje wersję i symbol aktualności. Przyciski **CHANGELOG** oraz **AKTUALIZUJ** pojawiają się wyłącznie po potwierdzeniu nowszego GitHub Release.
 
 Wersja 0.3.0 używa jednego centralnego busa komunikatów WebView. Przycisk **SPRAWDŹ AKTUALIZACJĘ** i komenda z Command Palette wywołują ten sam `UpdateService`.
 
