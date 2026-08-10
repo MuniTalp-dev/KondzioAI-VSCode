@@ -36,6 +36,6 @@ Minimalny workflow CI powinien używać `npm ci`, `npm test`, sprawdzenia linkó
 
 ## Aktualizacje użytkownika
 
-Wersja 0.2.0 sprawdza GitHub Releases, ale instalacja VSIX pozostaje ręczna i wymaga zgody. Procedurę opisuje [Aktualizacje](10-Aktualizacje.md).
+Wersja 0.2.3 pokazuje potwierdzony status aktualności na podstawie GitHub Releases, ale instalacja VSIX pozostaje ręczna i wymaga zgody. Procedurę opisuje [Aktualizacje](10-Aktualizacje.md).
 
 Push, publikacja release i tagowanie wymagają osobnej zgody właściciela projektu.

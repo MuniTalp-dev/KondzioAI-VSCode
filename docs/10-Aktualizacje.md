@@ -1,12 +1,18 @@
 # Aktualizacje
 
-Wersja 0.2.0 sprawdza najnowszy GitHub Release ręcznie albo automatycznie maksymalnie raz na 24 godziny. Wymaga ustawienia `kondzioAi.updateRepository` jako `owner/KondzioAI-VSCode`.
+Wersja 0.2.3 sprawdza najnowszy GitHub Release ręcznie albo automatycznie maksymalnie raz na 24 godziny. Wymaga ustawienia `kondzioAi.updateRepository` jako `owner/KondzioAI-VSCode`.
 
-Panel pokazuje `Kondzio AI v0.2.0 · Aktualne`, informację o dostępnej wersji albo czytelny błąd API. Nie pobiera i nie instaluje paczki bez zgody.
+Panel pokazuje wersję zainstalowaną, najnowszą wiarygodnie sprawdzoną wersję i jeden wyraźny status:
+
+- `✓ OPROGRAMOWANIE AKTUALNE` po potwierdzeniu zgodności wersji;
+- `⚠ DOSTĘPNA AKTUALIZACJA vX.Y.Z` wraz z przyciskiem otwarcia wydania;
+- status sprawdzania, błędu albo przekroczenia czasu.
+
+Zielony status nie pojawia się, jeżeli najnowszej wersji nie udało się wiarygodnie sprawdzić. Rozszerzenie nie pobiera ani nie instaluje paczki bez zgody.
 
 ## Ręczna aktualizacja rozszerzenia
 
-1. Kliknij **AKTUALIZUJ** i potwierdź otwarcie GitHub Release albo przejdź do zaufanego release ręcznie.
+1. Kliknij **SPRAWDŹ / OTWÓRZ WYDANIE** i potwierdź otwarcie GitHub Release albo przejdź do zaufanego release ręcznie.
 2. Porównaj wersję i opublikowaną sumę SHA-256.
 3. W VS Code uruchom **Extensions: Install from VSIX...**.
 4. Wskaż nową paczkę i wykonaj **Developer: Reload Window**.

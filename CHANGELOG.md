@@ -4,6 +4,17 @@ Wszystkie istotne zmiany projektu są dokumentowane w tym pliku. Format opiera s
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-08-10
+
+### Changed
+
+- Dodano wyraźny, zgodny z motywem VS Code status aktualności oprogramowania w sekcji WERSJA.
+- Przycisk otwarcia wydania jest widoczny tylko wtedy, gdy sprawdzanie potwierdzi dostępność nowszej wersji.
+
+### Fixed
+
+- Zielony status „OPROGRAMOWANIE AKTUALNE” nie jest wyświetlany, jeżeli najnowszej wersji nie udało się wiarygodnie ustalić.
+
 ## [0.2.2] - 2026-08-10
 
 ### Fixed

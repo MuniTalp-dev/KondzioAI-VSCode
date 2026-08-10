@@ -23,7 +23,7 @@ Windows, VS Code 1.100+, działający `E:\AI\Orchestrator` z Pythonem i MCP. Zad
 ## Szybki start
 
 1. W VS Code uruchom **Extensions: Install from VSIX...**.
-2. Wskaż `kondzio-ai-0.2.1.vsix`.
+2. Wskaż `kondzio-ai-0.2.3.vsix`.
 3. Wykonaj **Developer: Reload Window**.
 4. Otwórz ikonę **Kondzio AI** w Activity Bar.
 5. Wpisz zadanie, wybierz AUTO 1–3 i kliknij **URUCHOM**.
@@ -51,6 +51,10 @@ Zbadaj i zaplanuj eksport PNG 300 DPI z modułu wizualizacji WPF .NET 10.
 ## Bezpieczeństwo
 
 UI nie wykonuje samodzielnie operacji Git. Dry-run nie może zmieniać repozytorium, AUTO 2 nie commituję, a push pozostaje zablokowany. Fraza `ZATWIERDZAM PUSH` nigdy nie jest generowana przez rozszerzenie.
+
+## Aktualizacje
+
+Sekcja **WERSJA** pokazuje wersję zainstalowaną i najnowszą wersję z GitHub Releases. Zielony status potwierdza aktualność wyłącznie po wiarygodnym sprawdzeniu; osobne komunikaty informują o dostępnej aktualizacji, trwającym sprawdzaniu, błędzie albo przekroczeniu czasu.
 
 ## Dokumentacja
 
