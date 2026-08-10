@@ -48,6 +48,7 @@
     if (command === "status") return { type: command, runId: target.dataset.runId || runId };
     if (command === "choosePath") return { type: command, key: target.dataset.key };
     if (command === "saveSettings") return { type: command, value: JSON.stringify(Object.fromEntries(["orchestratorPath", "researchLabPath", "sandboxPath", "projectsRoot"].map(key => [key, $(key).value]))) };
+    if (command === "openRelease") return { type: command, url: update?.releaseUrl };
     if (command === "confirmFullRelease") return { type: command, value: releaseConfirmationToken };
     return { type: command, runId };
   }
@@ -102,6 +103,7 @@
   document.addEventListener("keydown", event => { if (event.target instanceof Element && event.target.classList.contains("switch") && (event.key === " " || event.key === "Enter")) { event.preventDefault(); toggleSwitch(event.target); } });
   document.addEventListener("change", updateSummary);
   window.addEventListener("message", event => { const message = event.data;
+    if (message.type === "installSecurityError") { $("installStatus").textContent = message.value.message; $("openReleaseAfterError").classList.remove("hidden"); }
     if (message.type === "releaseResult") showRelease(message.value); if (message.type === "releaseLog") { $("releaseState").textContent = message.value.state; $("releaseLog").textContent += `${message.value.state}: ${message.value.line}\n`; } if (message.type === "releaseConfirm") { const value = message.value; releaseConfirmationToken = value.confirmationToken; $("releaseConfirmText").textContent = `WERSJA: ${value.version}\nBRANCH: ${value.branch}\nREMOTE: ${value.remote}\nCOMMIT: ${value.commitMessage}\nTAG: ${value.tag}\n\nOperacje:\n- push main\n- push tag`; $("releaseConfirmModal").classList.remove("hidden"); }
     if (message.type === "status") showStatus(message.value); if (message.type === "history") { history = message.value || []; historyLimit = 5; renderHistory(); } if (message.type === "research") $("researchResult").textContent = `Provider: ${esc(message.value.provider)} | Źródła: ${esc(message.value.source_count)}\n${esc(message.value.analysis)}`; if (message.type === "health") showHealth(message.value); if (message.type === "healthChecking") showHealth({ items: ["Orchestrator", "MCP", "SearXNG", "Ollama", "Qwen", "Aider", "Git", ".NET", "Codex IDE", "Codex CLI"].map(name => ({ name, status: "CHECKING" })) }); if (message.type === "updateState") showUpdate(message.value);
     if (message.type === "warning") $("warning").textContent = message.value; if (message.type === "error") $("error").textContent = message.value; if (message.type === "installState") $("installStatus").textContent = message.value; if (message.type === "installSuccess") { $("installStatus").textContent = message.value; $("updateActions").classList.add("hidden"); $("changelogModal").classList.add("hidden"); $("reloadWindow").classList.remove("hidden"); } if (message.type === "busy") document.querySelector('[data-command="run"]').disabled = message.value; if (message.type === "pathSelected") $(message.key).value = message.value; if (message.type === "settings") Object.entries(message.value).forEach(([key, value]) => { $(key).value = value; }); if (message.type === "settingsSaved") { $("settingsStatus").textContent = "Ustawienia zapisane."; vscode.postMessage({ type: "healthCheck" }); } if (message.type === "preset") { if (message.autonomy) $("autonomy").value = String(message.autonomy); activateTab(message.section === "research" ? "researchPanel" : "taskPanel"); }
@@ -113,6 +115,7 @@
   manualUpdate.dataset.command = "checkForUpdates";
   manualUpdate.textContent = "SPRAWDŹ AKTUALIZACJĘ";
   $("diagnosticsPanel").insertBefore(manualUpdate, $("diagnosticsPanel").children[2] ?? null);
+  const openReleaseAfterError = document.createElement("button"); openReleaseAfterError.id = "openReleaseAfterError"; openReleaseAfterError.className = "hidden"; openReleaseAfterError.dataset.command = "openRelease"; openReleaseAfterError.textContent = "OTWÓRZ WYDANIE"; $("installStatus").after(openReleaseAfterError);
   updateSummary();
   vscode.postMessage({ type: "clientReady" });
 })();

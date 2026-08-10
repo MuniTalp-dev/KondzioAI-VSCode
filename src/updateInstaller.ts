@@ -21,6 +21,12 @@ const runCli: CliRunner = (command, args) => new Promise(resolve => {
   child.on("close", code => resolve({ code: code ?? -1, stderr }));
 });
 
+export function checksumForAsset(manifest: string, assetName: string): string | undefined {
+  const matches = manifest.split(/\r?\n/).map(line => /^([a-fA-F0-9]{64})\s+[ *]?(.+?)\s*$/.exec(line))
+    .filter((match): match is RegExpExecArray => Boolean(match) && match![2] === assetName);
+  return matches.length === 1 ? matches[0][1].toLowerCase() : undefined;
+}
+
 export async function installUpdate(
   release: UpdateResult,
   progress: (stage: InstallStage) => void,
@@ -29,23 +35,21 @@ export async function installUpdate(
   cli: CliRunner = runCli,
   timeoutMs = 30_000,
 ): Promise<InstallResult> {
-  if (release.status !== "updateAvailable" || !release.latestVersion || !release.vsixUrl || !release.vsixName) throw new Error("Brak assetu VSIX w GitHub Release.");
+  if (release.status !== "updateAvailable" || !release.latestVersion || !release.vsixUrl || !release.vsixName) throw new Error("Błąd bezpieczeństwa: brak właściwego assetu VSIX w GitHub Release.");
+  if (!release.checksumUrl) throw new Error("Błąd bezpieczeństwa: ten GitHub Release nie zawiera SHA256SUMS.txt. Automatyczna instalacja została zablokowana.");
   const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
+    progress("Weryfikacja SHA-256...");
+    const checksumResponse = await fetcher(release.checksumUrl, controller.signal);
+    if (!checksumResponse.ok) throw new Error(`Błąd bezpieczeństwa: GitHub HTTP ${checksumResponse.status} podczas pobierania SHA256SUMS.txt.`);
+    const expected = checksumForAsset(await checksumResponse.text(), release.vsixName);
+    if (!expected) throw new Error(`Błąd bezpieczeństwa: SHA256SUMS.txt nie zawiera dokładnie jednej poprawnej sumy dla ${release.vsixName}. Automatyczna instalacja została zablokowana.`);
     progress("Pobieranie aktualizacji..."); log(`Pobieranie VSIX: ${release.vsixUrl}`);
     const vsixResponse = await fetcher(release.vsixUrl, controller.signal);
     if (!vsixResponse.ok) throw new Error(`GitHub HTTP ${vsixResponse.status} podczas pobierania VSIX.`);
     const bytes = await vsixResponse.bytes();
-    progress("Weryfikacja SHA-256...");
-    const sha256 = createHash("sha256").update(bytes).digest("hex");
-    if (release.checksumUrl) {
-      const checksumResponse = await fetcher(release.checksumUrl, controller.signal);
-      if (!checksumResponse.ok) throw new Error(`GitHub HTTP ${checksumResponse.status} podczas pobierania SHA256SUMS.txt.`);
-      const sums = await checksumResponse.text();
-      const line = sums.split(/\r?\n/).find(value => value.trim().endsWith(release.vsixName!));
-      const expected = line?.trim().split(/\s+/)[0]?.toLowerCase();
-      if (!expected || expected !== sha256) { log(`Checksum mismatch: expected=${expected ?? "missing"}, actual=${sha256}`); throw new Error("Suma SHA-256 aktualizacji jest niezgodna. Instalacja przerwana."); }
-    }
+    const sha256 = createHash("sha256").update(bytes).digest("hex").toLowerCase();
+    if (expected.toLowerCase() !== sha256.toLowerCase()) { log(`Checksum mismatch: expected=${expected}, actual=${sha256}`); throw new Error("Błąd bezpieczeństwa: suma SHA-256 pobranego VSIX jest niezgodna z SHA256SUMS.txt tego wydania. Instalacja przerwana."); }
     const directory = await mkdtemp(join(tmpdir(), "kondzio-ai-update-"));
     const path = join(directory, release.vsixName); await writeFile(path, bytes);
     progress("Instalowanie...");

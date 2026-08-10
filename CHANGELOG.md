@@ -12,6 +12,12 @@ Wszystkie istotne zmiany projektu są dokumentowane w tym pliku. Format opiera s
 
 - Automatyzacja działa wyłącznie dla repozytorium pakietu `kondzio-ai`, nie nadpisuje tagów, nie używa force i wymaga jednorazowego tokenu potwierdzenia przed pushami.
 
+## [0.4.1] - 2026-08-10
+
+### Fixed
+
+- One-click updater pobiera `SHA256SUMS.txt` z tego samego GitHub Release co VSIX, wybiera wyłącznie dokładnie pasującą linię i blokuje instalację przy braku lub niezgodności sumy.
+
 ## [0.4.0] - 2026-08-10
 
 ### Added

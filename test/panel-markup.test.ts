@@ -62,6 +62,14 @@ test("instalacja i reload wymagają osobnych kliknięć użytkownika", () => {
   assert.doesNotMatch(script, /workbench\.action\.reloadWindow/);
 });
 
+test("błąd bezpieczeństwa updatera udostępnia wyłącznie otwarcie tego wydania", () => {
+  const script = readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8");
+  assert.match(markup, /installSecurityError/);
+  assert.match(script, /openReleaseAfterError/);
+  assert.match(script, /OTWÓRZ WYDANIE/);
+  assert.match(script, /url: update\?\.releaseUrl/);
+});
+
 test("0.4.0 ma kompaktowy header, macierz 2x2, switche i zakładki", () => {
   const script = readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8");
   assert.match(markup, /K·AI[\s\S]*Kondzio AI[\s\S]*versionStatus/);

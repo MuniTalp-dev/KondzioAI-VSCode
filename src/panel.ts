@@ -106,8 +106,8 @@ export class KondzioViewProvider implements vscode.WebviewViewProvider, vscode.D
   async checkUpdate(manual: boolean): Promise<void> { await runUpdateCheck(() => this.updates.check(manual), result => { if (result.status === "updateAvailable") { this.availableUpdate = result; } this.post({ type: "updateState", value: result }); }, this.updates.installedVersion); }
   private async installAvailableUpdate(): Promise<void> {
     if (!this.availableUpdate) { throw new Error("Najpierw sprawdź dostępność aktualizacji."); }
-    const result = await this.install(this.availableUpdate, stage => this.post({ type: "installState", value: stage }));
-    this.post({ type: "installSuccess", value: `Zainstalowano v${result.version}` });
+    try { const result = await this.install(this.availableUpdate, stage => this.post({ type: "installState", value: stage })); this.post({ type: "installSuccess", value: `Zainstalowano v${result.version}` }); }
+    catch (error) { this.post({ type: "installSecurityError", value: { message: error instanceof Error ? error.message : String(error), releaseUrl: this.availableUpdate.releaseUrl } }); throw error; }
   }
   private startPolling(): void { this.stopPolling(); this.poll = setInterval(() => void this.refreshStatus(), 2000); }
   private stopPolling(): void { if (this.poll) { clearInterval(this.poll); this.poll = undefined; } }
