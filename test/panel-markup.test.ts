@@ -122,3 +122,31 @@ test("0.5.0 ma responsywne usage, Save AI, Claude i dziennik pracy", () => {
   for (const stage of ["Analiza zadania", "Routing", "Research", "Repo\/context", "Executor", "Zmiany plików", "Testy", "Walidacja", "Zakończenie"]) assert.match(script, new RegExp(stage));
   assert.match(script, /message\.type === "usage"/); assert.match(script, /rate_limits|usedPercent/);
 });
+
+test("0.5.3 przekazuje aktywny projekt Extension Host do WebView", () => {
+  const script = readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8");
+  assert.match(markup, /inspect<string>\("activeProjectRoot"\)/);
+  assert.match(markup, /type: "projectState", value: this\.activeProject/);
+  assert.match(script, /message\.type === "projectState"/);
+  for (const field of ["projectName", "projectRoot", "repoRoot"]) assert.match(script, new RegExp(`${field}: projectState\\.${field}`));
+});
+
+test("0.5.3 mapuje każdy wariant wykonawcy bez wymuszania AUTO", () => {
+  const script = readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8");
+  for (const mode of ["auto", "local", "codex", "claude", "research"]) assert.match(markup, new RegExp(`value="${mode}"`));
+  assert.match(script, /mode: \$\("mode"\)\.value/);
+  assert.doesNotMatch(script, /mode:\s*["']auto["']/);
+});
+
+test("0.5.3 pokazuje projekt i blokuje run bez projektu", () => {
+  const script = readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8");
+  assert.match(markup, /Projekt: \$\{escapeHtmlAttribute\(project\?\.projectName \?\? "NIE WYBRANO"\)\}/);
+  assert.match(markup, /id="runTask"[\s\S]*disabled/);
+  assert.match(script, /if \(!projectState\) return undefined/);
+  assert.match(script, /\$\("runTask"\)\.disabled = !projectState/);
+});
+
+test("0.5.3 loguje metadane runu bez pełnego promptu", () => {
+  assert.match(markup, /Run request:\\nprojectName=\$\{project\.projectName\}[\s\S]*executor=\$\{mode\}[\s\S]*dryRun=\$\{dryRun\}/);
+  assert.match(markup, /message\.type === "run" \? "WebView message received: run"/);
+});

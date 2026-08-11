@@ -33,6 +33,14 @@ test("uruchamia AUTO 2", async () => {
   assert.equal(backend.calls[0].args.autonomy, 2); assert.equal(backend.calls[0].args.mode, "local");
 });
 
+for (const mode of ["auto", "local", "codex", "claude", "research"] as const) {
+  test(`przekazuje wykonawcę ${mode.toUpperCase()}`, async () => {
+    const backend = new FakeBackend();
+    await new OrchestratorController(backend).run("test", 2, mode);
+    assert.equal(backend.calls[0].args.mode, mode);
+  });
+}
+
 test("przekazuje polskie znaki do MCP bez zmiany", async () => {
   const backend = new FakeBackend();
   const prompt = "Zażółć gęślą jaźń. Możliwość, błędy, użytkownik, ścieżka.";

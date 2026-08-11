@@ -27,12 +27,12 @@ export class OrchestratorController {
   constructor(private readonly backend: OrchestratorBackend, private readonly healthTransform: (health: HealthResult) => Promise<HealthResult> = async health => health) {}
   run(prompt: string, autonomy: Autonomy = 2, mode: ExecutorMode = "auto", dryRun = false,
       preferLocal = false, blockCodexEscalation = false, codexApproved = false,
-      sandboxPath?: string, projectsRoot?: string, projectRoot?: string, projectName?: string) {
+      sandboxPath?: string, projectsRoot?: string, projectRoot?: string, projectName?: string, repoRoot?: string) {
     const request: RunRequest = { prompt, autonomy, mode, dry_run: dryRun, prefer_local: preferLocal,
                                   block_codex_escalation: blockCodexEscalation, codex_approved: codexApproved,
                                   ...(sandboxPath ? { sandbox_path: sandboxPath } : {}),
                                   ...(projectsRoot ? { projects_root: projectsRoot } : {}),
-                                  ...(projectRoot ? { projectRoot, repoRoot: projectRoot } : {}),
+                                  ...(projectRoot ? { projectRoot, repoRoot: repoRoot ?? projectRoot } : {}),
                                   ...(projectName ? { projectName } : {}) };
     return this.backend.call<StatusResult>("orchestrator_run", request as unknown as Record<string, unknown>);
   }

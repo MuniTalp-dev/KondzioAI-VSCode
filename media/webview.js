@@ -7,6 +7,7 @@
   let history = [];
   let historyLimit = 5;
   let releaseConfirmationToken;
+  let projectState;
 
   const sendClientError = value => vscode.postMessage({ type: "clientError", value: value instanceof Error ? `${value.name}: ${value.message}\n${value.stack ?? ""}` : String(value) });
   window.onerror = (message, source, line, column, error) => sendClientError(error ?? `${message} at ${source}:${line}:${column}`);
@@ -43,7 +44,10 @@
     if (id === "historyPanel") vscode.postMessage({ type: "history" });
   }
   function payloadFor(command, target) {
-    if (command === "run") return { type: command, prompt: $("prompt").value, autonomy: Number($("autonomy").value), mode: $("mode").value, dryRun: switchOn("dry"), preferLocal: switchOn("saveCodex"), blockCodexEscalation: switchOn("saveCodex") };
+    if (command === "run") {
+      if (!projectState) return undefined;
+      return { type: command, prompt: $("prompt").value, autonomy: Number($("autonomy").value), mode: $("mode").value, dryRun: switchOn("dry"), preferLocal: switchOn("saveCodex"), blockCodexEscalation: switchOn("saveCodex"), projectName: projectState.projectName, projectRoot: projectState.projectRoot, repoRoot: projectState.repoRoot };
+    }
     if (command === "research") return { type: command, query: $("query").value };
     if (command === "status") return { type: command, runId: target.dataset.runId || runId };
     if (command === "choosePath") return { type: command, key: target.dataset.key };
@@ -118,11 +122,12 @@
     if (command === "moreHistory") { historyLimit += 5; renderHistory(); return; }
     if (command === "cancelRelease") { $("releaseConfirmModal").classList.add("hidden"); return; }
     if (command === "confirmFullRelease") $("releaseConfirmModal").classList.add("hidden");
-    vscode.postMessage(payloadFor(command, target));
+    const payload = payloadFor(command, target); if (payload) vscode.postMessage(payload);
   });
   document.addEventListener("keydown", event => { if (event.target instanceof Element && event.target.classList.contains("switch") && (event.key === " " || event.key === "Enter")) { event.preventDefault(); toggleSwitch(event.target); } });
   document.addEventListener("change", updateSummary);
   window.addEventListener("message", event => { const message = event.data;
+    if (message.type === "projectState") { projectState = message.value; $("activeProject").textContent = `Projekt: ${projectState?.projectName || "NIE WYBRANO"}`; $("runTask").disabled = !projectState; }
     if (message.type === "usage") showUsage(message.value);
     if (message.type === "status") showWorkLog(message.value);
     if (message.type === "installSecurityError") { $("installStatus").textContent = message.value.message; $("openReleaseAfterError").classList.remove("hidden"); }

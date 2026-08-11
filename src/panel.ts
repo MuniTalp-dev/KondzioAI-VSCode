@@ -10,12 +10,13 @@ import { webviewClientScript } from "./webviewBus";
 import { ReleaseService } from "./releaseService";
 import { randomUUID } from "node:crypto";
 import { UsageService } from "./usage";
+import { ProjectState, resolveProjectState } from "./projectState";
 
-type PanelMessage = { type?: string; prompt?: string; autonomy?: Autonomy; mode?: ExecutorMode; dryRun?: boolean; preferLocal?: boolean; blockCodexEscalation?: boolean; query?: string; runId?: string; url?: string; key?: string; value?: string };
+type PanelMessage = { type?: string; prompt?: string; autonomy?: Autonomy; mode?: ExecutorMode; dryRun?: boolean; preferLocal?: boolean; blockCodexEscalation?: boolean; projectName?: string; projectRoot?: string; repoRoot?: string; query?: string; runId?: string; url?: string; key?: string; value?: string };
 const pathDefaults: Record<string, string> = {
   orchestratorPath: "E:\\AI\\Orchestrator", researchLabPath: "E:\\AI\\ResearchLab",
   sandboxPath: "E:\\AI\\Repos", projectsRoot: "C:\\Projekty\\VCode",
-  activeProjectRoot: "E:\\AI\\Orchestrator\\vscode-extension",
+  activeProjectRoot: "",
 };
 const escapeHtmlAttribute = (value: string): string => value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\r/g, "&#13;").replace(/\n/g, "&#10;");
 
@@ -28,6 +29,7 @@ export class KondzioViewProvider implements vscode.WebviewViewProvider, vscode.D
   private messageSubscription?: vscode.Disposable;
   private availableUpdate?: UpdateResult;
   private releaseConfirmationToken?: string;
+  private activeProject?: ProjectState;
 
   constructor(private readonly controller: OrchestratorController, private readonly onStatus: (status?: StatusResult) => void,
     private readonly openMarkdown: (title: string, markdown: string) => Promise<void>, private readonly updates: UpdateService,
@@ -40,10 +42,12 @@ export class KondzioViewProvider implements vscode.WebviewViewProvider, vscode.D
     this.view = view;
     view.webview.options = { enableScripts: true, localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, "media")] };
     const scriptUri = view.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "media", "webview.js"));
-    view.webview.html = html(this.updates.installedVersion, this.settings(), scriptUri.toString(), view.webview.cspSource);
+    const settings = this.settings();
+    this.activeProject = resolveProjectState(settings.activeProjectRoot);
+    view.webview.html = html(this.updates.installedVersion, settings, scriptUri.toString(), view.webview.cspSource, this.activeProject);
     this.messageSubscription?.dispose();
     this.messageSubscription = view.webview.onDidReceiveMessage(message => void this.handle(message as PanelMessage));
-    this.log("WebView panel created");
+    this.log(`WebView panel created; active project: ${this.activeProject?.projectName ?? "NIE WYBRANO"}`);
     void this.refreshStatus(); void this.checkHealth(); void this.refreshUsage();
     if (this.updates.shouldAutoCheck()) { void this.checkUpdate(false); }
   }
@@ -55,14 +59,16 @@ export class KondzioViewProvider implements vscode.WebviewViewProvider, vscode.D
 
   async run(prompt: string, autonomy: Autonomy, mode: ExecutorMode, dryRun: boolean, preferLocal = false, blockCodexEscalation = false, codexApproved = false): Promise<void> {
     if (!prompt.trim()) { throw new Error("Pole „Co mam zrobić?” nie może być puste."); }
+    const project = this.activeProject;
+    if (!project) { throw new Error("Wybierz poprawny aktywny projekt przed uruchomieniem zadania."); }
     this.post({ type: "busy", value: true });
     const preflight = await this.controller.preflight(mode); this.post({ type: "health", value: preflight.health });
     if (preflight.warnings.length) { this.post({ type: "warning", value: preflight.warnings.join("\n") }); }
     this.lastRequest = { prompt: prompt.trim(), autonomy, mode, dryRun, preferLocal, blockCodexEscalation };
     const paths = this.settings();
+    this.log(`Run request:\nprojectName=${project.projectName}\nprojectRoot=${project.projectRoot}\nrepoRoot=${project.repoRoot}\nexecutor=${mode}\nautonomy=${autonomy}\ndryRun=${dryRun}`);
     const status = await this.controller.run(prompt.trim(), autonomy, mode, dryRun, preferLocal, blockCodexEscalation,
-      codexApproved, paths.sandboxPath, paths.projectsRoot, paths.activeProjectRoot,
-      paths.activeProjectRoot ? vscode.workspace.name ?? "KondzioAI-VSCode" : undefined);
+      codexApproved, paths.sandboxPath, paths.projectsRoot, project.projectRoot, project.projectName, project.repoRoot);
     this.currentRunId = status.run_id; this.publishStatus(status); if (ACTIVE_STATES.has(status.status)) { this.startPolling(); }
   }
   async refreshStatus(runId = this.currentRunId): Promise<void> { try { this.publishStatus(await this.controller.status(runId)); } catch (error) { this.error(error); } }
@@ -70,10 +76,10 @@ export class KondzioViewProvider implements vscode.WebviewViewProvider, vscode.D
   async showLastReport(): Promise<void> { try { const result = await this.controller.lastReport(); await this.openMarkdown(`Kondzio AI — ${result.run_id ?? "raport"}`, result.report); } catch (error) { this.error(error); } }
 
   private async handle(message: PanelMessage): Promise<void> {
-    this.log(`WebView message received: ${JSON.stringify(message)}`);
+    this.log(message.type === "run" ? "WebView message received: run" : `WebView message received: ${JSON.stringify(message)}`);
     try {
       switch (message.type) {
-        case "clientReady": this.log("WebView client ready"); break;
+        case "clientReady": this.log("WebView client ready"); this.post({ type: "projectState", value: this.activeProject }); break;
         case "clientError": this.log(`WebView client error: ${message.value ?? "unknown error"}`); break;
         case "run": await this.run(message.prompt ?? "", message.autonomy ?? 2, message.mode ?? "auto", Boolean(message.dryRun), Boolean(message.preferLocal), Boolean(message.blockCodexEscalation)); break;
         case "approveCodex": if (this.lastRequest) { const r = this.lastRequest; await this.run(r.prompt, r.autonomy, "codex", r.dryRun, false, r.blockCodexEscalation, true); } break;
@@ -110,9 +116,9 @@ export class KondzioViewProvider implements vscode.WebviewViewProvider, vscode.D
   private settings(): Record<string, string> {
     const c = vscode.workspace.getConfiguration("kondzioAi");
     const values = Object.fromEntries(Object.entries(pathDefaults).map(([key, value]) => [key, c.get<string>(key, value)]));
-    const explicitlySaved = c.inspect<string>("activeProjectRoot")?.globalValue;
+    const explicitlySaved = c.inspect<string>("activeProjectRoot")?.workspaceFolderValue ?? c.inspect<string>("activeProjectRoot")?.workspaceValue ?? c.inspect<string>("activeProjectRoot")?.globalValue;
     const folders = vscode.workspace.workspaceFolders ?? [];
-    values.activeProjectRoot = explicitlySaved || (folders.length === 1 ? folders[0].uri.fsPath : "") || pathDefaults.activeProjectRoot;
+    values.activeProjectRoot = explicitlySaved || (folders.length === 1 ? folders[0].uri.fsPath : "");
     return values;
   }
   private async choosePath(key?: string): Promise<void> { if (!key || !(key in pathDefaults)) { return; } const picked = await vscode.window.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false }); if (picked?.[0]) { this.post({ type: "pathSelected", key, value: picked[0].fsPath }); } }
@@ -134,7 +140,7 @@ export class KondzioViewProvider implements vscode.WebviewViewProvider, vscode.D
   dispose(): void { this.stopPolling(); this.messageSubscription?.dispose(); this.view = undefined; }
 }
 
-export function html(installedVersion = "", settings: Record<string, string> = pathDefaults, scriptUri = "media/webview.js", cspSource = "'self'"): string {
+export function html(installedVersion = "", settings: Record<string, string> = pathDefaults, scriptUri = "media/webview.js", cspSource = "'self'", project?: ProjectState): string {
   const nonce = Math.random().toString(36).slice(2);
   const document = `<!doctype html><html lang="pl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'nonce-${nonce}'; script-src ${cspSource} 'nonce-${nonce}';"><style nonce="${nonce}">
   :root{color-scheme:light dark;--kondzio-accent:#61993b;--kondzio-hover:#70a94a;--kondzio-active:#527f33}*{box-sizing:border-box}body{font:12px var(--vscode-font-family);color:var(--vscode-foreground);padding:7px;margin:0;overflow-x:hidden}.brand,.line,.labelrow,.switch-row{display:flex;align-items:center;gap:7px}.brand{margin-bottom:6px;white-space:nowrap}.brand .muted{display:inline}.logo{font-size:17px;font-weight:800}.muted{color:var(--vscode-descriptionForeground);font-size:11px}textarea,input,select{width:100%;min-width:0;background:var(--vscode-input-background);color:var(--vscode-input-foreground);border:1px solid var(--vscode-input-border);border-radius:4px;padding:5px}textarea{min-height:52px;resize:vertical}.row,.actions,.paths{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.row{border:1px solid var(--vscode-panel-border);border-radius:7px;overflow:visible}.row>.field,.row+.card,.row+.card+.card{min-height:67px;margin:0;padding:7px}.field{margin:5px 0}.field label,.section-title{display:block;font-weight:700;margin-bottom:3px}.labelrow{justify-content:space-between}.check{display:flex;align-items:center;gap:6px;margin:4px 0}.check input{width:auto}button{border:1px solid var(--vscode-button-border,transparent);border-radius:4px;padding:5px 7px;background:var(--vscode-button-secondaryBackground);color:var(--vscode-button-secondaryForeground);font-weight:650;cursor:pointer;min-height:27px}button:hover{filter:brightness(1.12)}button:active{filter:brightness(.92)}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[role=tab]:focus-visible{outline:2px solid var(--kondzio-accent);outline-offset:2px}.primary{background:var(--kondzio-accent);color:#fff}.primary:hover{background:var(--kondzio-hover)}.primary:active{background:var(--kondzio-active)}.tertiary{background:transparent;border-color:var(--vscode-panel-border)}.wide{width:100%}.card{border:1px solid var(--vscode-panel-border);border-radius:5px;padding:7px;margin:5px 0;background:var(--vscode-sideBar-background)}.compact{padding:6px}.actions{margin:5px 0}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.value{font-weight:650;overflow-wrap:anywhere}.progress{height:5px;background:var(--vscode-panel-border);margin:5px 0}.bar{height:100%;background:var(--kondzio-accent)}details{margin-top:6px;border-top:1px solid var(--vscode-panel-border);padding-top:5px}summary{font-weight:750;cursor:pointer;padding:3px 0}.health{display:grid;grid-template-columns:1fr auto;gap:4px}.OK,.success{color:var(--kondzio-accent)}.WARNING,.warning{color:var(--vscode-editorWarning-foreground)}.ERROR,.error{color:var(--vscode-errorForeground)}.status-chip{display:inline-block;border:1px solid currentColor;border-radius:999px;font-weight:750;padding:2px 6px}.history-item{width:100%;text-align:left;margin:2px 0}.path{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px}.path label{grid-column:1/-1}.help{display:none;margin:5px 0}.help.open{display:block}.hidden{display:none!important}.switch{width:40px!important;height:22px;min-height:22px;border-radius:999px;padding:0;position:relative}.switch[aria-checked=true]{background:var(--kondzio-accent)}.switch:after{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:white;left:3px;top:2px;transition:transform .14s}.switch[aria-checked=true]:after{transform:translateX(17px)}.tabs{display:flex;overflow-x:auto;margin-top:6px;border-bottom:1px solid var(--vscode-panel-border)}[role=tab]{flex:1;min-width:max-content;border:0;border-radius:0;background:transparent;font-size:10px;padding:6px 4px}[role=tab][aria-selected=true]{color:var(--kondzio-accent);border-bottom:2px solid var(--kondzio-accent)}[role=tabpanel]{padding-top:6px}.modal{position:fixed;inset:0;z-index:10;background:#0008;display:grid;place-items:center;padding:10px}.modal-card{max-height:80vh;overflow:auto;background:var(--vscode-editorWidget-background);padding:10px;border-radius:7px}pre{white-space:pre-wrap}@media(max-width:300px){.row,.actions,.paths,.grid{grid-template-columns:1fr}}@media(min-width:320px){.row{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -145,9 +151,8 @@ export function html(installedVersion = "", settings: Record<string, string> = p
   <div class="field"><label for="prompt">Co mam zrobić?</label><textarea id="prompt" aria-label="Opis zadania" placeholder="Opisz zadanie dla Orchestratora..."></textarea></div>
   <div id="usageLines" class="usage-lines" aria-live="polite"><button class="usage-line" data-provider="CODEX">CODEX <span class="mini-progress"><i></i></span><span>Zużycie: —</span><span>Reset: —</span></button><button class="usage-line" data-provider="CLAUDE">CLAUDE <span class="mini-progress"><i></i></span><span>Zużycie: —</span><span>Reset: —</span></button></div>
   <div class="row"><div class="field"><div class="labelrow"><label for="autonomy">AUTONOMIA</label><button data-command="autonomyHelp" aria-controls="autonomyHelp" aria-expanded="false" aria-label="Opis autonomii">?</button></div><select id="autonomy"><option value="1">AUTO 1</option><option value="2" selected>AUTO 2</option><option value="3">AUTO 3</option></select><div id="autonomyHelp" class="help muted"></div></div><div class="field"><div class="labelrow"><label for="mode">WYKONAWCA</label><button data-command="modeHelp" aria-controls="modeHelp" aria-expanded="false" aria-label="Opis wykonawców">?</button></div><select id="mode"><option value="auto">AUTO — zalecany</option><option value="local">LOCAL</option><option value="research">RESEARCH</option><option value="codex">CODEX</option><option value="claude">CLAUDE</option></select><div id="modeHelp" class="help muted"></div></div><div class="field"><div class="labelrow"><strong>TRYB PRÓBNY</strong><button data-command="dryHelp" aria-controls="dryHelp" aria-expanded="false" aria-label="Opis trybu próbnego">?</button></div><div class="switch-row"><span id="dryState">OFF</span><button id="dry" class="switch" role="switch" aria-checked="false" aria-label="Tryb próbny"></button></div><div id="dryHelp" class="help muted">Tworzy plan, ETA, ryzyka i analizę bez zmieniania plików.</div></div><div class="field"><div class="labelrow"><strong>OSZCZĘDZAJ AI</strong><button data-command="codexHelp" aria-controls="codexHelp" aria-expanded="false" aria-label="Opis oszczędzania AI">?</button></div><div class="switch-row"><span id="codexState">OFF</span><button id="saveCodex" class="switch" role="switch" aria-checked="false" aria-label="Oszczędzaj AI"></button></div><div id="codexHelp" class="help muted">Oszczędzanie AI:<br>• preferowany jest LOCAL,<br>• automatyczny CODEX jest blokowany,<br>• automatyczny CLAUDE jest blokowany.</div></div></div>
-  <div class="card compact"><strong>PODSUMOWANIE</strong><div id="taskSummary" aria-live="polite">LOCAL • Qwen 2.5 Coder 7B<br>AUTO 2 • Zmiany plików: TAK • CODEX: DOSTĘPNY</div></div>
-  <button class="primary wide" data-command="run">▶ URUCHOM ZADANIE</button>
-  <div class="muted" id="activeProject">Projekt: ${escapeHtmlAttribute(settings.activeProjectRoot ? "KondzioAI-VSCode" : "BRAK")}</div>
+  <div class="card compact"><strong>PODSUMOWANIE</strong><div id="activeProject">Projekt: ${escapeHtmlAttribute(project?.projectName ?? "NIE WYBRANO")}</div><div id="taskSummary" aria-live="polite">LOCAL • Qwen 2.5 Coder 7B<br>AUTO 2 • Zmiany plików: TAK • CODEX: DOSTĘPNY</div></div>
+  <button id="runTask" class="primary wide" data-command="run"${project ? "" : " disabled"}>▶ URUCHOM ZADANIE</button>
   <details class="work-log"><summary>DZIENNIK PRACY</summary><div id="workLog" aria-live="polite">Gotowy do pracy.</div></details>
   <div class="tabs" role="tablist"><button role="tab" aria-selected="true" data-tab="taskPanel">ZADANIE</button><button role="tab" aria-selected="false" data-tab="reportPanel">RAPORT</button><button role="tab" aria-selected="false" data-tab="historyPanel">HISTORIA</button><button role="tab" aria-selected="false" data-tab="researchPanel">RESEARCH</button><button role="tab" aria-selected="false" data-tab="diagnosticsPanel">DIAGNOSTYKA</button></div>
   <div id="warning" class="warning" role="status" aria-live="polite"></div><div id="error" class="error" role="alert" aria-live="assertive"></div><section id="taskPanel" role="tabpanel"><div id="status" class="card" aria-live="polite"><strong>Brak aktywnego zadania.</strong></div>
