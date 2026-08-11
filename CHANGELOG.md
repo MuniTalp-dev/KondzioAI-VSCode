@@ -192,3 +192,9 @@ Wszystkie istotne zmiany projektu są dokumentowane w tym pliku. Format opiera s
 - Obsługa sześciu narzędzi MCP przez cienki adapter.
 - AUTO 1/2/3, wykonawcy, dry-run, status, ETA, historia, raport i research.
 - Polska dokumentacja użytkowa i techniczna.
+# 0.5.2
+
+- Explicit project targeting through WebView, MCP and backend.
+- Active project bootstrap from settings or a single VS Code workspace.
+- Context events in Work Log before executor startup.
+- Rich `failed_context` diagnostics and project-aware history.

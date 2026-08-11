@@ -15,6 +15,7 @@ type PanelMessage = { type?: string; prompt?: string; autonomy?: Autonomy; mode?
 const pathDefaults: Record<string, string> = {
   orchestratorPath: "E:\\AI\\Orchestrator", researchLabPath: "E:\\AI\\ResearchLab",
   sandboxPath: "E:\\AI\\Repos", projectsRoot: "C:\\Projekty\\VCode",
+  activeProjectRoot: "E:\\AI\\Orchestrator\\vscode-extension",
 };
 const escapeHtmlAttribute = (value: string): string => value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\r/g, "&#13;").replace(/\n/g, "&#10;");
 
@@ -60,7 +61,8 @@ export class KondzioViewProvider implements vscode.WebviewViewProvider, vscode.D
     this.lastRequest = { prompt: prompt.trim(), autonomy, mode, dryRun, preferLocal, blockCodexEscalation };
     const paths = this.settings();
     const status = await this.controller.run(prompt.trim(), autonomy, mode, dryRun, preferLocal, blockCodexEscalation,
-      codexApproved, paths.sandboxPath, paths.projectsRoot);
+      codexApproved, paths.sandboxPath, paths.projectsRoot, paths.activeProjectRoot,
+      paths.activeProjectRoot ? vscode.workspace.name ?? "KondzioAI-VSCode" : undefined);
     this.currentRunId = status.run_id; this.publishStatus(status); if (ACTIVE_STATES.has(status.status)) { this.startPolling(); }
   }
   async refreshStatus(runId = this.currentRunId): Promise<void> { try { this.publishStatus(await this.controller.status(runId)); } catch (error) { this.error(error); } }
@@ -105,7 +107,14 @@ export class KondzioViewProvider implements vscode.WebviewViewProvider, vscode.D
     } finally { this.post({ type: "busy", value: false }); }
   }
 
-  private settings(): Record<string, string> { const c = vscode.workspace.getConfiguration("kondzioAi"); return Object.fromEntries(Object.entries(pathDefaults).map(([key, value]) => [key, c.get<string>(key, value)])); }
+  private settings(): Record<string, string> {
+    const c = vscode.workspace.getConfiguration("kondzioAi");
+    const values = Object.fromEntries(Object.entries(pathDefaults).map(([key, value]) => [key, c.get<string>(key, value)]));
+    const explicitlySaved = c.inspect<string>("activeProjectRoot")?.globalValue;
+    const folders = vscode.workspace.workspaceFolders ?? [];
+    values.activeProjectRoot = explicitlySaved || (folders.length === 1 ? folders[0].uri.fsPath : "") || pathDefaults.activeProjectRoot;
+    return values;
+  }
   private async choosePath(key?: string): Promise<void> { if (!key || !(key in pathDefaults)) { return; } const picked = await vscode.window.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false }); if (picked?.[0]) { this.post({ type: "pathSelected", key, value: picked[0].fsPath }); } }
   private async saveSettings(message: PanelMessage): Promise<void> { const values = message.value ? JSON.parse(message.value) as Record<string, string> : {}; const c = vscode.workspace.getConfiguration("kondzioAi"); for (const key of Object.keys(pathDefaults)) { await c.update(key, values[key] ?? pathDefaults[key], vscode.ConfigurationTarget.Global); } this.post({ type: "settingsSaved" }); }
   private async restoreDefaults(): Promise<void> { const c = vscode.workspace.getConfiguration("kondzioAi"); for (const [key, value] of Object.entries(pathDefaults)) { await c.update(key, value, vscode.ConfigurationTarget.Global); } this.post({ type: "settings", value: pathDefaults }); }
@@ -138,6 +147,7 @@ export function html(installedVersion = "", settings: Record<string, string> = p
   <div class="row"><div class="field"><div class="labelrow"><label for="autonomy">AUTONOMIA</label><button data-command="autonomyHelp" aria-controls="autonomyHelp" aria-expanded="false" aria-label="Opis autonomii">?</button></div><select id="autonomy"><option value="1">AUTO 1</option><option value="2" selected>AUTO 2</option><option value="3">AUTO 3</option></select><div id="autonomyHelp" class="help muted"></div></div><div class="field"><div class="labelrow"><label for="mode">WYKONAWCA</label><button data-command="modeHelp" aria-controls="modeHelp" aria-expanded="false" aria-label="Opis wykonawców">?</button></div><select id="mode"><option value="auto">AUTO — zalecany</option><option value="local">LOCAL</option><option value="research">RESEARCH</option><option value="codex">CODEX</option><option value="claude">CLAUDE</option></select><div id="modeHelp" class="help muted"></div></div><div class="field"><div class="labelrow"><strong>TRYB PRÓBNY</strong><button data-command="dryHelp" aria-controls="dryHelp" aria-expanded="false" aria-label="Opis trybu próbnego">?</button></div><div class="switch-row"><span id="dryState">OFF</span><button id="dry" class="switch" role="switch" aria-checked="false" aria-label="Tryb próbny"></button></div><div id="dryHelp" class="help muted">Tworzy plan, ETA, ryzyka i analizę bez zmieniania plików.</div></div><div class="field"><div class="labelrow"><strong>OSZCZĘDZAJ AI</strong><button data-command="codexHelp" aria-controls="codexHelp" aria-expanded="false" aria-label="Opis oszczędzania AI">?</button></div><div class="switch-row"><span id="codexState">OFF</span><button id="saveCodex" class="switch" role="switch" aria-checked="false" aria-label="Oszczędzaj AI"></button></div><div id="codexHelp" class="help muted">Oszczędzanie AI:<br>• preferowany jest LOCAL,<br>• automatyczny CODEX jest blokowany,<br>• automatyczny CLAUDE jest blokowany.</div></div></div>
   <div class="card compact"><strong>PODSUMOWANIE</strong><div id="taskSummary" aria-live="polite">LOCAL • Qwen 2.5 Coder 7B<br>AUTO 2 • Zmiany plików: TAK • CODEX: DOSTĘPNY</div></div>
   <button class="primary wide" data-command="run">▶ URUCHOM ZADANIE</button>
+  <div class="muted" id="activeProject">Projekt: ${escapeHtmlAttribute(settings.activeProjectRoot ? "KondzioAI-VSCode" : "BRAK")}</div>
   <details class="work-log"><summary>DZIENNIK PRACY</summary><div id="workLog" aria-live="polite">Gotowy do pracy.</div></details>
   <div class="tabs" role="tablist"><button role="tab" aria-selected="true" data-tab="taskPanel">ZADANIE</button><button role="tab" aria-selected="false" data-tab="reportPanel">RAPORT</button><button role="tab" aria-selected="false" data-tab="historyPanel">HISTORIA</button><button role="tab" aria-selected="false" data-tab="researchPanel">RESEARCH</button><button role="tab" aria-selected="false" data-tab="diagnosticsPanel">DIAGNOSTYKA</button></div>
   <div id="warning" class="warning" role="status" aria-live="polite"></div><div id="error" class="error" role="alert" aria-live="assertive"></div><section id="taskPanel" role="tabpanel"><div id="status" class="card" aria-live="polite"><strong>Brak aktywnego zadania.</strong></div>

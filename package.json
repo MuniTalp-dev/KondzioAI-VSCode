@@ -2,7 +2,7 @@
   "name": "kondzio-ai",
   "displayName": "Kondzio AI",
   "description": "Interfejs VS Code dla lokalnego Kondzio AI Orchestrator.",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "publisher": "kondzio-studio",
   "license": "UNLICENSED",
   "engines": {
@@ -115,6 +115,11 @@
           "type": "string",
           "default": "C:\\Projekty\\VCode",
           "description": "Główny katalog projektów."
+        },
+        "kondzioAi.activeProjectRoot": {
+          "type": "string",
+          "default": "",
+          "description": "Jawny aktywny projekt; pusty używa pojedynczego workspace VS Code."
         },
         "kondzioAi.orchestratorRoot": {
           "type": "string",

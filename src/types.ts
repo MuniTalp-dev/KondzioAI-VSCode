@@ -4,8 +4,8 @@ export interface UsageWindow { type: string; usedPercent: number; remainingPerce
 export interface AiUsage { provider: "CODEX" | "CLAUDE"; available: boolean; usedPercent?: number; remainingPercent?: number; resetAt?: string; windows: UsageWindow[]; source: "vscode-public-api" | "cli-json" | "claude-rate-limits" | "unsupported"; sourceVersion?: string; retrievedAt: string; error?: string; }
 export interface AiUsageProvider { readonly provider: "CODEX" | "CLAUDE"; retrieve(): Promise<AiUsage>; }
 
-export interface RunRequest { prompt: string; autonomy: Autonomy; mode: ExecutorMode; dry_run: boolean; prefer_local: boolean; block_codex_escalation: boolean; codex_approved?: boolean; sandbox_path?: string; projects_root?: string; }
-export interface RunSummary { run_id: string; prompt?: string; status?: string; autonomy?: number; agent?: string; eta_minutes?: number; actual_minutes?: number; started_at?: string; }
+export interface RunRequest { prompt: string; autonomy: Autonomy; mode: ExecutorMode; dry_run: boolean; prefer_local: boolean; block_codex_escalation: boolean; codex_approved?: boolean; sandbox_path?: string; projects_root?: string; projectRoot?: string; repoRoot?: string; projectName?: string; }
+export interface RunSummary { run_id: string; prompt?: string; status?: string; autonomy?: number; agent?: string; eta_minutes?: number; actual_minutes?: number; started_at?: string; project_name?: string; }
 export interface StatusResult {
   run_id: string; status: string; started_at?: string; elapsed_seconds?: number; current_stage?: string;
   current_attempt?: number; current_agent?: string; initial_eta?: { minimum?: number; typical?: number; maximum?: number };
@@ -16,6 +16,7 @@ export interface StatusResult {
   prefer_local?: boolean; block_codex_escalation?: boolean; codex_allowed?: boolean; codex_required?: boolean;
   codex_reason?: string; executors_used?: string[]; local_attempts?: number; research_used?: boolean;
   codex_used?: boolean; codex_blocked?: boolean; estimated_codex_savings?: string;
+  project_name?: string; project_root?: string; repo_root?: string; context_events?: Array<{stage:string;status:string;message:string}>; context_details?: Record<string, unknown>;
 }
 
 export interface OrchestratorBackend {

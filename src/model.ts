@@ -1,7 +1,7 @@
 import { Autonomy, ExecutorMode, HealthResult, OrchestratorBackend, RunRequest, StatusResult } from "./types";
 
 export const ACTIVE_STATES = new Set(["starting", "running", "researching", "implementing", "testing", "validating", "escalating"]);
-export const FAILURE_STATES = new Set(["failed_executor", "failed_validation", "incomplete", "cancelled"]);
+export const FAILURE_STATES = new Set(["failed_context", "failed_executor", "failed_validation", "incomplete", "cancelled"]);
 
 export function progressFor(stage = ""): number {
   const normalized = stage.toLowerCase();
@@ -27,11 +27,13 @@ export class OrchestratorController {
   constructor(private readonly backend: OrchestratorBackend, private readonly healthTransform: (health: HealthResult) => Promise<HealthResult> = async health => health) {}
   run(prompt: string, autonomy: Autonomy = 2, mode: ExecutorMode = "auto", dryRun = false,
       preferLocal = false, blockCodexEscalation = false, codexApproved = false,
-      sandboxPath?: string, projectsRoot?: string) {
+      sandboxPath?: string, projectsRoot?: string, projectRoot?: string, projectName?: string) {
     const request: RunRequest = { prompt, autonomy, mode, dry_run: dryRun, prefer_local: preferLocal,
                                   block_codex_escalation: blockCodexEscalation, codex_approved: codexApproved,
                                   ...(sandboxPath ? { sandbox_path: sandboxPath } : {}),
-                                  ...(projectsRoot ? { projects_root: projectsRoot } : {}) };
+                                  ...(projectsRoot ? { projects_root: projectsRoot } : {}),
+                                  ...(projectRoot ? { projectRoot, repoRoot: projectRoot } : {}),
+                                  ...(projectName ? { projectName } : {}) };
     return this.backend.call<StatusResult>("orchestrator_run", request as unknown as Record<string, unknown>);
   }
   status(runId?: string) { return this.backend.call<StatusResult>("orchestrator_status", runId ? { run_id: runId } : {}); }

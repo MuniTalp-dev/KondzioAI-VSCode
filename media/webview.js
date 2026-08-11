@@ -47,7 +47,7 @@
     if (command === "research") return { type: command, query: $("query").value };
     if (command === "status") return { type: command, runId: target.dataset.runId || runId };
     if (command === "choosePath") return { type: command, key: target.dataset.key };
-    if (command === "saveSettings") return { type: command, value: JSON.stringify(Object.fromEntries(["orchestratorPath", "researchLabPath", "sandboxPath", "projectsRoot"].map(key => [key, $(key).value]))) };
+    if (command === "saveSettings") return { type: command, value: JSON.stringify(Object.fromEntries(["orchestratorPath", "researchLabPath", "sandboxPath", "projectsRoot", "activeProjectRoot"].map(key => [key, $(key).value]))) };
     if (command === "openRelease") return { type: command, url: update?.releaseUrl };
     if (command === "confirmFullRelease") return { type: command, value: releaseConfirmationToken };
     return { type: command, runId };
@@ -66,7 +66,7 @@
   function renderHistory() {
     const root = $("historyList"); root.innerHTML = "";
     if (!history.length) { root.textContent = "Brak wcześniejszych zadań."; return; }
-    history.slice(0, historyLimit).forEach(item => { const button = document.createElement("button"); button.className = "history-item"; button.dataset.command = "status"; button.dataset.runId = item.run_id; button.textContent = [item.status, item.agent, item.prompt, item.started_at].filter(Boolean).join(" • "); root.appendChild(button); });
+    history.slice(0, historyLimit).forEach(item => { const button = document.createElement("button"); button.className = "history-item"; button.dataset.command = "status"; button.dataset.runId = item.run_id; button.textContent = [item.project_name, item.status, item.agent, item.prompt, item.started_at].filter(Boolean).join(" • "); root.appendChild(button); });
     $("moreHistory").classList.toggle("hidden", historyLimit >= history.length);
   }
   function showHealth(value) {
@@ -90,6 +90,12 @@
     });
   }
   function showWorkLog(value) {
+    if (Array.isArray(value.context_events) && value.context_events.length) {
+      $("workLog").innerHTML = value.context_events.map(event => `<span>${event.status === "failed" ? "✕" : event.status === "completed" ? "✓" : "●"} ${htmlEsc(event.message)}</span>`).join("");
+      $("activeProject").textContent = `Projekt: ${value.project_name || "BRAK"}`;
+      if (value.status === "failed_context") $("warning").textContent = JSON.stringify(value.context_details || {}, null, 2);
+      return;
+    }
     const stages = [["Analiza zadania", true], ["Routing", Boolean(value.routing || value.current_agent)], ["Research", Boolean(value.research_used)], ["Repo/context", Boolean(value.run_id)], ["Executor", Boolean(value.current_agent)], ["Zmiany plików", Array.isArray(value.files_changed)], ["Testy", Boolean(value.test_status)], ["Walidacja", Boolean(value.validation_status)], ["Zakończenie", value.status === "completed"]];
     $("workLog").innerHTML = stages.filter(([, visible]) => visible).map(([label]) => `<span>${htmlEsc(label)}</span>`).join("");
   }

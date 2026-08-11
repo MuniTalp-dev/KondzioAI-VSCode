@@ -46,6 +46,15 @@ test("przekazuje dry-run", async () => {
   assert.equal(backend.calls[0].args.dry_run, true);
 });
 
+test("przekazuje jawny projekt przez MCP", async () => {
+  const backend = new FakeBackend();
+  await new OrchestratorController(backend).run("wersja", 2, "local", false, false, false, false,
+    "E:\\AI\\Repos", "C:\\Projekty\\VCode", "E:\\AI\\Orchestrator\\vscode-extension", "KondzioAI-VSCode");
+  assert.equal(backend.calls[0].args.projectRoot, "E:\\AI\\Orchestrator\\vscode-extension");
+  assert.equal(backend.calls[0].args.repoRoot, "E:\\AI\\Orchestrator\\vscode-extension");
+  assert.equal(backend.calls[0].args.projectName, "KondzioAI-VSCode");
+});
+
 test("przekazuje ochronę CODEX", async () => {
   const backend = new FakeBackend();
   await new OrchestratorController(backend).run("test", 2, "auto", false, true, true);
