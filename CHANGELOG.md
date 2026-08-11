@@ -4,6 +4,13 @@ Wszystkie istotne zmiany projektu są dokumentowane w tym pliku. Format opiera s
 
 ## [Unreleased]
 
+## [0.4.4] - 2026-08-11
+
+### Fixed
+
+- One-click updater rozwiązuje rzeczywistą ścieżkę VS Code CLI na Windows, preferuje `code.cmd`, obsługuje fallback LocalAppData i VS Code Insiders oraz bezpiecznie uruchamia wrapper przez `cmd.exe /d /s /c` bez `shell=true`.
+- Instalacja VSIX obsługuje ścieżki ze spacjami i zapisuje diagnostykę resolved CLI, instalowanego pliku oraz kodu wyjścia.
+
 ## [0.4.3] - 2026-08-11
 
 ### Fixed
