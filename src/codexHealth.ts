@@ -1,23 +1,13 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { spawn } from "node:child_process";
 import { HealthItem, HealthResult } from "./types";
+import { runProcess } from "./processRunner";
 
 export type CommandResult = { code: number; stdout: string; stderr: string };
 export type CommandRunner = (command: string, args: string[]) => Promise<CommandResult>;
 export type CodexLogger = (message: string) => void;
 
-export const runCommand: CommandRunner = (command, args) => new Promise(resolve => {
-  const isWindowsWrapper = process.platform === "win32" && /\.(?:cmd|bat)$/i.test(command);
-  const executable = isWindowsWrapper ? (process.env.ComSpec || process.env.COMSPEC || "cmd.exe") : command;
-  const invocationArgs = isWindowsWrapper ? ["/d", "/s", "/c", command, ...args] : args;
-  const child = spawn(executable, invocationArgs, { windowsHide: true, shell: false });
-  let stdout = "", stderr = "";
-  child.stdout.on("data", data => { stdout += String(data); });
-  child.stderr.on("data", data => { stderr += String(data); });
-  child.on("error", error => resolve({ code: -1, stdout, stderr: error.message }));
-  child.on("close", code => resolve({ code: code ?? -1, stdout, stderr }));
-});
+export const runCommand: CommandRunner = async (command, args) => runProcess(command, args, process.cwd(), "execution", message => console.log(`[Kondzio AI] ${message}`));
 
 export async function resolveCodexCli(
   configuredPath = "",

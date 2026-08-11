@@ -49,7 +49,7 @@ export function activate(context: vscode.ExtensionContext): void {
   };
   const provider = new KondzioViewProvider(controller, status => { statusBar.text = statusBarText(status); }, openMarkdown, updates, confirmUpdate, log, context.extensionUri,
     async (release, progress) => installUpdate(release, progress, log),
-    async () => { await vscode.commands.executeCommand("workbench.action.reloadWindow"); }, new ReleaseService(releaseRepositoryPath), usage);
+    async () => { await vscode.commands.executeCommand("workbench.action.reloadWindow"); }, new ReleaseService(releaseRepositoryPath, undefined, undefined, log), usage);
   context.subscriptions.push(output, backend, provider, statusBar, vscode.window.registerWebviewViewProvider(KondzioViewProvider.viewType, provider, { webviewOptions: { retainContextWhenHidden: true } }));
   const reveal = async () => { await provider.reveal(); };
   const command = (id: string, action: () => unknown) => context.subscriptions.push(vscode.commands.registerCommand(id, action));

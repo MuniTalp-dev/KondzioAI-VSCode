@@ -2,7 +2,7 @@
   "name": "kondzio-ai",
   "displayName": "Kondzio AI",
   "description": "Interfejs VS Code dla lokalnego Kondzio AI Orchestrator.",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "publisher": "kondzio-studio",
   "license": "UNLICENSED",
   "engines": {
