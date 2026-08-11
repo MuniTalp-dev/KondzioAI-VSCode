@@ -96,7 +96,13 @@ export class KondzioViewProvider implements vscode.WebviewViewProvider, vscode.D
         case "prepareFullRelease": if (this.releases) { this.releaseConfirmationToken = randomUUID(); this.post({ type: "releaseConfirm", value: { ...(await this.releases.inspect(false)), confirmationToken: this.releaseConfirmationToken } }); } break;
         case "confirmFullRelease": if (this.releases) { if (!this.releaseConfirmationToken || message.value !== this.releaseConfirmationToken) throw new Error("Brak ważnego potwierdzenia wydania."); this.releaseConfirmationToken = undefined; this.post({ type: "releaseResult", value: await this.releases.fullRelease((state, line) => this.post({ type: "releaseLog", value: { state, line } })) }); } break;
       }
-    } catch (error) { if (message.type?.includes("Release") || message.type?.startsWith("release")) { this.post({ type: "releaseLog", value: { state: "FAILED", line: error instanceof Error ? error.message : String(error) } }); } this.error(error); } finally { this.post({ type: "busy", value: false }); }
+    } catch (error) {
+      if (message.type?.includes("Release") || message.type?.startsWith("release")) {
+        const detail = error instanceof Error ? error.message : String(error);
+        this.post({ type: "releaseLog", value: { state: "FAILED", stage: "release-readiness", line: detail } });
+        this.log(`release-readiness error: ${detail}`); this.post({ type: "error", value: `[release-readiness] ${detail}` });
+      } else { this.error(error); }
+    } finally { this.post({ type: "busy", value: false }); }
   }
 
   private settings(): Record<string, string> { const c = vscode.workspace.getConfiguration("kondzioAi"); return Object.fromEntries(Object.entries(pathDefaults).map(([key, value]) => [key, c.get<string>(key, value)])); }

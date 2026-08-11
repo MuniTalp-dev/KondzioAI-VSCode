@@ -11,6 +11,7 @@ Thumbs.db
 .vscode/settings.json
 coverage/
 TestResults/
+Backups/
 runs/
 .agents/
 .codex/

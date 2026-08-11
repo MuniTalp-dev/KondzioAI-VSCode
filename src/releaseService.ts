@@ -1,31 +1,25 @@
 import { createHash } from "node:crypto";
 import { readFile, realpath } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { spawn } from "node:child_process";
+import { ProcessLogger, ProcessStage, runProcess as safeRunProcess } from "./processRunner";
 
 export type ReleaseState = "GOTOWE" | "NIEGOTOWE" | "TESTY" | "BUILD" | "COMMIT" | "TAG" | "PUSH MAIN" | "PUSH TAG" | "RELEASE" | "DONE" | "FAILED";
 export interface ReleaseCheck { label: string; pass: boolean; detail: string; }
 export interface ReleasePlan { repository: string; branch: string; remote: string; status: string; version: string; tag: string; localTagExists: boolean; remoteTagExists: boolean; commitMessage: string; vsix: string; sha256?: string; checks?: ReleaseCheck[]; state: ReleaseState; log: string[]; }
-export type ProcessRunner = (command: string, args: string[], cwd: string) => Promise<{ code: number; stdout: string; stderr: string }>;
+export type ProcessRunner = (command: string, args: string[], cwd: string, stage?: ProcessStage, log?: ProcessLogger) => Promise<{ code: number; stdout: string; stderr: string }>;
 type ReleaseFetcher = (url: string) => Promise<{ ok: boolean; status: number }>;
 
-const runProcess: ProcessRunner = (command, args, cwd) => new Promise(resolveResult => {
-  const child = spawn(command, args, { cwd, windowsHide: true, shell: false }); let stdout = "", stderr = "";
-  child.stdout.on("data", data => { stdout += String(data); }); child.stderr.on("data", data => { stderr += String(data); });
-  child.on("error", error => resolveResult({ code: -1, stdout, stderr: error.message }));
-  child.on("close", code => resolveResult({ code: code ?? -1, stdout, stderr }));
-});
-
 export class ReleaseService {
-  constructor(private readonly repositoryPath: string, private readonly runner: ProcessRunner = runProcess, private readonly fetcher: ReleaseFetcher = fetch) {}
+  constructor(private readonly repositoryPath: string, private readonly runner: ProcessRunner = safeRunProcess,
+              private readonly fetcher: ReleaseFetcher = fetch, private readonly log: ProcessLogger = () => {}) {}
   private async root(): Promise<string> {
     const root = await realpath(resolve(this.repositoryPath));
     const pkg = JSON.parse(await readFile(join(root, "package.json"), "utf8")) as { name?: string };
     if (pkg.name !== "kondzio-ai") throw new Error("Release jest dozwolony wyłącznie dla repozytorium rozszerzenia Kondzio AI.");
     return root;
   }
-  private async exec(command: string, args: string[], root: string, allowFailure = false) {
-    const result = await this.runner(command, args, root);
+  private async exec(command: string, args: string[], root: string, allowFailure = false, stage: ProcessStage = "release-readiness") {
+    const result = await this.runner(command, args, root, stage, this.log);
     if (!allowFailure && result.code !== 0) throw new Error(`${command} ${args.join(" ")}: ${result.stderr.trim() || `code ${result.code}`}`);
     return result.stdout.trim();
   }
@@ -46,7 +40,8 @@ export class ReleaseService {
     ];
     const log: string[] = [];
     if (runBuild) for (const [label, command, args] of [["Testy", "npm", ["test"]], ["Compile", "npm", ["run", "compile"]], ["VSIX package", "npm", ["run", "package"]]] as const) {
-      const result = await this.runner(process.platform === "win32" ? `${command}.cmd` : command, [...args], root); const pass = result.code === 0; checks.push({ label, pass, detail: pass ? "PASS" : result.stderr.trim() }); log.push(`${label}: ${pass ? "PASS" : "FAIL"}`);
+      const stage: ProcessStage = label === "Testy" ? "tests" : "package";
+      const result = await this.runner(command, [...args], root, stage, this.log); const pass = result.code === 0; checks.push({ label, pass, detail: pass ? "PASS" : `[${stage}] ${result.stderr.trim()}` }); log.push(`${label}: ${pass ? "PASS" : "FAIL"}`);
     }
     const vsix = join(root, `kondzio-ai-${pkg.version}.vsix`); let sha256: string | undefined;
     try { sha256 = createHash("sha256").update(await readFile(vsix)).digest("hex").toUpperCase(); } catch {}
@@ -56,7 +51,7 @@ export class ReleaseService {
   async fullRelease(report: (state: ReleaseState, line: string) => void): Promise<ReleasePlan> {
     const plan = await this.inspect(false); const root = plan.repository;
     if (plan.branch !== "main" || !plan.remote || plan.localTagExists || plan.remoteTagExists) throw new Error("Repozytorium nie spełnia warunków bezpiecznego wydania lub tag już istnieje.");
-    const step = async (state: ReleaseState, command: string, args: string[]) => { report(state, `${command} ${args.join(" ")}`); await this.exec(process.platform === "win32" && command === "npm" ? "npm.cmd" : command, args, root); };
+    const step = async (state: ReleaseState, command: string, args: string[]) => { report(state, `${command} ${args.join(" ")}`); await this.exec(command, args, root, false, state === "TESTY" ? "tests" : state === "BUILD" ? "package" : "release-readiness"); };
     await step("TESTY", "npm", ["test"]); await step("BUILD", "npm", ["run", "compile"]); await step("BUILD", "npm", ["run", "package"]);
     await step("COMMIT", "git", ["add", "--all", "--", "."]); await step("COMMIT", "git", ["commit", "-m", plan.commitMessage]);
     await step("TAG", "git", ["tag", "-a", plan.tag, "-m", plan.commitMessage]); await step("PUSH MAIN", "git", ["push", "origin", "main"]); await step("PUSH TAG", "git", ["push", "origin", plan.tag]);

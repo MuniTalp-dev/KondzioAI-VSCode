@@ -1,6 +1,7 @@
 import { ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import { OrchestratorBackend } from "./types";
+import { processInvocation } from "./processRunner";
 
 interface Pending { resolve(value: unknown): void; reject(error: Error): void; }
 
@@ -13,7 +14,11 @@ export class McpBackend implements OrchestratorBackend {
 
   private ensureStarted(): ChildProcessWithoutNullStreams {
     if (this.process && !this.process.killed) { return this.process; }
-    const child = spawn(this.pythonPath, [this.bridgePath, this.root], { cwd: this.root, windowsHide: true });
+    const invocation = processInvocation(this.pythonPath, [this.bridgePath, this.root]);
+    console.log(`[Kondzio AI] Process resolved: ${invocation.resolved}`);
+    console.log(`[Kondzio AI] Args: ${[this.bridgePath, this.root].join(" ")}`);
+    console.log(`[Kondzio AI] cwd: ${this.root}`);
+    const child = spawn(invocation.command, invocation.args, { ...invocation.options, cwd: this.root }) as ChildProcessWithoutNullStreams;
     this.process = child;
     createInterface({ input: child.stdout }).on("line", line => {
       try {

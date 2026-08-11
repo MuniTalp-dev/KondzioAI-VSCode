@@ -3,8 +3,8 @@ import { existsSync } from "node:fs";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { spawn } from "node:child_process";
 import { UpdateResult } from "./types";
+import { processInvocation, runProcess } from "./processRunner";
 
 export type InstallStage = "Pobieranie aktualizacji..." | "Weryfikacja SHA-256..." | "Instalowanie...";
 export interface InstallResult { version: string; path: string; sha256: string; }
@@ -19,25 +19,11 @@ const fetchBinary: BinaryFetcher = async (url, signal) => {
 };
 export function vsCodeCliInvocation(command: string, args: string[], platform = process.platform,
                                     comSpec = process.env.ComSpec || process.env.COMSPEC || "cmd.exe") {
-  if (platform === "win32" && /\.(?:cmd|bat)$/i.test(command)) {
-    if ([command, ...args].some(argument => /["&|<>^%!\r\n]/.test(argument))) {
-      throw new Error("Argument VS Code CLI zawiera znaki niedozwolone dla cmd.exe.");
-    }
-    const commandLine = `"${[command, ...args].map(argument => `"${argument}"`).join(" ")}"`;
-    return { command: comSpec, args: ["/d", "/s", "/c", commandLine],
-      options: { windowsHide: true, windowsVerbatimArguments: true, shell: false as const } };
-  }
-  return { command, args, options: { windowsHide: true, shell: false as const } };
+  const invocation = processInvocation(command, args, platform, process.env.PATH ?? "", existsSync, comSpec);
+  return { command: invocation.command, args: invocation.args, options: invocation.options };
 }
 
-export const runCli: CliRunner = (command, args) => new Promise(resolve => {
-  const invocation = vsCodeCliInvocation(command, args);
-  const child = spawn(invocation.command, invocation.args, invocation.options); let stdout = "", stderr = "";
-  child.stdout.on("data", data => { stdout += String(data); });
-  child.stderr.on("data", data => { stderr += String(data); });
-  child.on("error", error => resolve({ code: -1, stdout, stderr: error.message }));
-  child.on("close", code => resolve({ code: code ?? -1, stdout, stderr }));
-});
+export const runCli: CliRunner = async (command, args) => runProcess(command, args, process.cwd(), "execution", message => console.log(`[Kondzio AI] ${message}`));
 
 export async function resolveVsCodeCli(
   runner: CliRunner = runCli,

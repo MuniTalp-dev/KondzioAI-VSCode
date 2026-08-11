@@ -33,6 +33,13 @@ test("uruchamia AUTO 2", async () => {
   assert.equal(backend.calls[0].args.autonomy, 2); assert.equal(backend.calls[0].args.mode, "local");
 });
 
+test("przekazuje polskie znaki do MCP bez zmiany", async () => {
+  const backend = new FakeBackend();
+  const prompt = "Zażółć gęślą jaźń. Możliwość, błędy, użytkownik, ścieżka.";
+  await new OrchestratorController(backend).run(prompt, 2, "local", false, true, true);
+  assert.equal(backend.calls[0].args.prompt, prompt);
+});
+
 test("przekazuje dry-run", async () => {
   const backend = new FakeBackend();
   await new OrchestratorController(backend).run("plan", 1, "auto", true);
