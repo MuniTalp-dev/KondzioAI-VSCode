@@ -104,6 +104,11 @@ test("wymuszony niedostępny CODEX jest blokowany", async () => {
   await assert.rejects(() => new OrchestratorController(backend).preflight("codex"), /CODEX jest niedostępny/);
 });
 
+test("wymuszony niedostępny CLAUDE jest blokowany", async () => {
+  const backend = new FakeBackend(); backend.health.items.push({ name: "Claude CLI", status: "WARNING" });
+  await assert.rejects(() => new OrchestratorController(backend).preflight("claude"), /CLAUDE jest niedostępny/);
+});
+
 test("RESEARCH pokazuje fallback DDGS", async () => {
   const backend = new FakeBackend(); const searx = backend.health.items.find(x => x.name === "SearXNG")!;
   searx.status = "WARNING"; searx.detail = "Orchestrator użyje fallbacku DDGS.";

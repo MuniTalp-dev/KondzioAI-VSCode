@@ -14,7 +14,7 @@
   const esc = value => String(value ?? "—");
   const htmlEsc = value => esc(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   const autonomyDescriptions = { 1: "AUTO 1: plan, ETA, ryzyka i analiza; bez zmian.", 2: "AUTO 2: implementacja, testy i walidacja; bez automatycznego commita.", 3: "AUTO 3: pełny pipeline i retry; push zawsze zatrzymany." };
-  const modeDescriptions = { auto: "AUTO (zalecany): Orchestrator wybiera wykonawcę.", local: "LOCAL: Qwen + Ollama + Aider.", research: "RESEARCH: SearXNG + Qwen, z fallbackiem DDGS.", codex: "CODEX: trudne zadania programistyczne." };
+  const modeDescriptions = { auto: "AUTO (zalecany): Orchestrator wybiera wykonawcę.", local: "LOCAL: Qwen + Ollama + Aider.", research: "RESEARCH: SearXNG + Qwen, z fallbackiem DDGS.", codex: "CODEX: trudne zadania programistyczne.", claude: "CLAUDE: oficjalny Claude Code CLI." };
   const switchOn = id => $(id).getAttribute("aria-checked") === "true";
 
   function toggleSwitch(button) {
@@ -27,7 +27,7 @@
     const mode = $("mode").value;
     const save = switchOn("saveCodex");
     const dry = switchOn("dry");
-    const executor = mode === "research" ? "RESEARCH • SearXNG + lokalny Qwen" : mode === "codex" ? "CODEX" : "LOCAL • Qwen 2.5 Coder 7B";
+    const executor = mode === "research" ? "RESEARCH • SearXNG + lokalny Qwen" : mode === "codex" ? "CODEX" : mode === "claude" ? "CLAUDE" : "LOCAL • Qwen 2.5 Coder 7B";
     const action = dry ? "TRYB PRÓBNY" : "Zmiany plików: TAK";
     const codex = mode === "codex" ? (save ? "CODEX: WYMAGA ZGODY" : "Wymaga użycia Codexa") : `CODEX: ${save ? "CHRONIONY" : "DOSTĘPNY"}`;
     $("taskSummary").innerHTML = `${executor}<br>AUTO ${$("autonomy").value} • ${action} • <span class="badge">${codex}</span>`;
@@ -80,6 +80,19 @@
     status.title = value.status === "current" ? "Oprogramowanie aktualne" : available ? "Dostępna aktualizacja" : "Nie sprawdzono aktualności";
     $("updateActions").classList.toggle("hidden", !available);
   }
+  function showUsage(values) {
+    document.querySelectorAll(".usage-line").forEach(row => {
+      const value = (values || []).find(item => item.provider === row.dataset.provider), spans = row.querySelectorAll(":scope > span");
+      const used = value?.available && typeof value.usedPercent === "number" ? `${Math.round(value.usedPercent)}%` : "—";
+      spans[0].querySelector("i").style.width = value?.available ? `${value.usedPercent}%` : "0"; spans[1].textContent = `Zużycie: ${used}`;
+      spans[2].textContent = `Reset: ${value?.available && value.resetAt ? new Date(value.resetAt).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—"}`;
+      row.title = value ? `Provider: ${value.provider}\nŹródło: ${value.source}\nWersja: ${value.sourceVersion || "—"}\nWykorzystano: ${used}\nPozostało: ${value.remainingPercent ?? "—"}\nReset: ${value.resetAt || "—"}\nTyp limitu: ${(value.windows || []).map(item => item.type).join(", ") || "—"}\nOstatni odczyt: ${value.retrievedAt}\n${value.error || ""}` : "Niedostępne";
+    });
+  }
+  function showWorkLog(value) {
+    const stages = [["Analiza zadania", true], ["Routing", Boolean(value.routing || value.current_agent)], ["Research", Boolean(value.research_used)], ["Repo/context", Boolean(value.run_id)], ["Executor", Boolean(value.current_agent)], ["Zmiany plików", Array.isArray(value.files_changed)], ["Testy", Boolean(value.test_status)], ["Walidacja", Boolean(value.validation_status)], ["Zakończenie", value.status === "completed"]];
+    $("workLog").innerHTML = stages.filter(([, visible]) => visible).map(([label]) => `<span>${htmlEsc(label)}</span>`).join("");
+  }
   function showRelease(value) {
     $("releaseState").textContent = value.state;
     $("releaseMetaPanel").textContent = `Repozytorium: ${esc(value.repository)}\nBranch: ${esc(value.branch)}\nOrigin: ${esc(value.remote)}\nGit status: ${esc(value.status)}\nWersja: ${esc(value.version)}\nTag lokalny: ${value.tag} — ${value.localTagExists ? "ISTNIEJE" : "BRAK"}\nTag na remote: ${value.remoteTagExists ? "ISTNIEJE" : "BRAK"}`;
@@ -90,6 +103,7 @@
   document.addEventListener("click", event => {
     const target = event.target instanceof Element ? event.target.closest("button") : null; if (!target) return;
     if (target.classList.contains("switch")) { toggleSwitch(target); return; }
+    if (target.classList.contains("usage-line")) { alert(target.title); return; }
     if (target.dataset.tab) { activateTab(target.dataset.tab); return; }
     const command = target.dataset.command; if (!command) return;
     if (showHelp(command, target)) return;
@@ -103,6 +117,8 @@
   document.addEventListener("keydown", event => { if (event.target instanceof Element && event.target.classList.contains("switch") && (event.key === " " || event.key === "Enter")) { event.preventDefault(); toggleSwitch(event.target); } });
   document.addEventListener("change", updateSummary);
   window.addEventListener("message", event => { const message = event.data;
+    if (message.type === "usage") showUsage(message.value);
+    if (message.type === "status") showWorkLog(message.value);
     if (message.type === "installSecurityError") { $("installStatus").textContent = message.value.message; $("openReleaseAfterError").classList.remove("hidden"); }
     if (message.type === "releaseResult") showRelease(message.value); if (message.type === "releaseLog") { $("releaseState").textContent = message.value.state; $("releaseLog").textContent += `${message.value.state}: ${message.value.line}\n`; } if (message.type === "releaseConfirm") { const value = message.value; releaseConfirmationToken = value.confirmationToken; $("releaseConfirmText").textContent = `WERSJA: ${value.version}\nBRANCH: ${value.branch}\nREMOTE: ${value.remote}\nCOMMIT: ${value.commitMessage}\nTAG: ${value.tag}\n\nOperacje:\n- push main\n- push tag`; $("releaseConfirmModal").classList.remove("hidden"); }
     if (message.type === "status") showStatus(message.value); if (message.type === "history") { history = message.value || []; historyLimit = 5; renderHistory(); } if (message.type === "research") $("researchResult").textContent = `Provider: ${esc(message.value.provider)} | Źródła: ${esc(message.value.source_count)}\n${esc(message.value.analysis)}`; if (message.type === "health") showHealth(message.value); if (message.type === "healthChecking") showHealth({ items: ["Orchestrator", "MCP", "SearXNG", "Ollama", "Qwen", "Aider", "Git", ".NET", "Codex IDE", "Codex CLI"].map(name => ({ name, status: "CHECKING" })) }); if (message.type === "updateState") showUpdate(message.value);

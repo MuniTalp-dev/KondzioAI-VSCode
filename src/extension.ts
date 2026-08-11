@@ -8,6 +8,8 @@ import { checkForUpdatesCommand } from "./updateCommand";
 import { enrichCodexHealth } from "./codexHealth";
 import { installUpdate } from "./updateInstaller";
 import { ReleaseService } from "./releaseService";
+import { enrichClaudeHealth } from "./claudeHealth";
+import { ClaudeUsageProvider, CodexUsageProvider, PublicExtensionInfo, UsageService } from "./usage";
 
 export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel("Kondzio AI");
@@ -18,8 +20,17 @@ export function activate(context: vscode.ExtensionContext): void {
   const codexCliPath = config.get<string>("codexCliPath", "");
   const releaseRepositoryPath = config.get<string>("extensionRepositoryPath", "E:\\AI\\Orchestrator\\vscode-extension");
   const log = (message: string) => output.appendLine(`[Kondzio AI] ${message}`);
-  const controller = new OrchestratorController(backend, health => enrichCodexHealth(health,
-    Boolean(vscode.extensions.getExtension("openai.chatgpt") ?? vscode.extensions.getExtension("openai.codex")), codexCliPath, undefined, log));
+  const controller = new OrchestratorController(backend, async health => enrichClaudeHealth(await enrichCodexHealth(health,
+    Boolean(vscode.extensions.getExtension("openai.chatgpt") ?? vscode.extensions.getExtension("openai.codex")), codexCliPath, undefined, log), undefined, log));
+  const discoverCodex = async (): Promise<PublicExtensionInfo | undefined> => {
+    const extension = vscode.extensions.getExtension("openai.chatgpt") ?? vscode.extensions.getExtension("openai.codex"); if (!extension) return undefined;
+    await extension.activate(); const commands = (await vscode.commands.getCommands(true)).filter(id => /(?:codex|openai|chatgpt)/i.test(id) && /(?:usage|status|limit|account)/i.test(id));
+    const exportsValue = extension.exports as unknown; const exportsKeys = exportsValue && (typeof exportsValue === "object" || typeof exportsValue === "function") ? Object.keys(exportsValue) : [];
+    const info = { id: extension.id, version: String(extension.packageJSON.version ?? ""), active: extension.isActive, exportsKeys, commands };
+    log(`Usage discovery: ${JSON.stringify(info)}`); return info;
+  };
+  const defaultClaudeUsagePath = process.env.LOCALAPPDATA ? join(process.env.LOCALAPPDATA, "KondzioAI", "claude-usage.json") : "";
+  const usage = new UsageService([new CodexUsageProvider(discoverCodex), new ClaudeUsageProvider(config.get<string>("claudeUsagePath", defaultClaudeUsagePath))]);
   const version = String(context.extension.packageJSON.version);
   const updateRepository = "MuniTalp-dev/KondzioAI-VSCode";
   log("Extension activated");
@@ -38,7 +49,7 @@ export function activate(context: vscode.ExtensionContext): void {
   };
   const provider = new KondzioViewProvider(controller, status => { statusBar.text = statusBarText(status); }, openMarkdown, updates, confirmUpdate, log, context.extensionUri,
     async (release, progress) => installUpdate(release, progress, log),
-    async () => { await vscode.commands.executeCommand("workbench.action.reloadWindow"); }, new ReleaseService(releaseRepositoryPath));
+    async () => { await vscode.commands.executeCommand("workbench.action.reloadWindow"); }, new ReleaseService(releaseRepositoryPath), usage);
   context.subscriptions.push(output, backend, provider, statusBar, vscode.window.registerWebviewViewProvider(KondzioViewProvider.viewType, provider, { webviewOptions: { retainContextWhenHidden: true } }));
   const reveal = async () => { await provider.reveal(); };
   const command = (id: string, action: () => unknown) => context.subscriptions.push(vscode.commands.registerCommand(id, action));

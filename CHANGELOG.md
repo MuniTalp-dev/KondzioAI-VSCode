@@ -4,6 +4,17 @@ Wszystkie istotne zmiany projektu są dokumentowane w tym pliku. Format opiera s
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-08-11
+
+### Added
+
+- Dodano bezpieczne discovery oficjalnych integracji CODEX i CLAUDE, pięciominutowy cache oraz kompaktowy podgląd wykorzystania i resetów bez odczytu sekretów.
+- Dodano obsługę wielu okien limitów Claude z oficjalnego JSON `statusLine`, wykrywanie Claude Code CLI, pozycję CLAUDE na liście wykonawców oraz operacyjny Dziennik pracy.
+
+### Changed
+
+- „Oszczędzaj CODEX” zastąpiono przełącznikiem „Oszczędzaj AI”, który preferuje LOCAL i blokuje automatyczny wybór płatnych executorów.
+
 ## [0.4.4] - 2026-08-11
 
 ### Fixed

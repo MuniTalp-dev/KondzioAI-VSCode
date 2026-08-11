@@ -114,3 +114,11 @@ test("Diagnostyka ma bezpieczną automatyzację Release / Git z potwierdzeniem",
   assert.match(markup, /randomUUID/);
   assert.match(markup, /Brak ważnego potwierdzenia wydania/);
 });
+
+test("0.5.0 ma responsywne usage, Save AI, Claude i dziennik pracy", () => {
+  const script = readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8");
+  assert.match(markup, /id="usageLines"/); assert.match(markup, /mini-progress/); assert.match(markup, /OSZCZĘDZAJ AI/);
+  assert.match(markup, /value="claude">CLAUDE/); assert.match(markup, /DZIENNIK PRACY/); assert.match(markup, /@media\(max-width:300px\).*usage-line/);
+  for (const stage of ["Analiza zadania", "Routing", "Research", "Repo\/context", "Executor", "Zmiany plików", "Testy", "Walidacja", "Zakończenie"]) assert.match(script, new RegExp(stage));
+  assert.match(script, /message\.type === "usage"/); assert.match(script, /rate_limits|usedPercent/);
+});

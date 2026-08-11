@@ -8,5 +8,6 @@ export const MODE_DESCRIPTIONS = {
   auto: "AUTO (zalecany): Orchestrator wybiera wykonawcę i może zastosować fallback.",
   local: "LOCAL: Qwen + Ollama + Aider.",
   research: "RESEARCH: SearXNG + Qwen, z fallbackiem DDGS.",
-  codex: "CODEX: trudne zadania programistyczne."
+  codex: "CODEX: trudne zadania programistyczne.",
+  claude: "CLAUDE: oficjalny Claude Code CLI, tylko gdy jest dostępny."
 } as const;

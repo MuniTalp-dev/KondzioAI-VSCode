@@ -52,6 +52,9 @@ export class OrchestratorController {
       throw new Error("CODEX jest niedostępny. Wybierz AUTO albo napraw Codex CLI.");
     }
     const warnings: string[] = [];
+    if (mode === "claude" && byName.get("Claude CLI")?.status !== "OK") {
+      throw new Error("CLAUDE jest niedostępny. Zainstaluj oficjalny Claude Code CLI albo wybierz AUTO.");
+    }
     if (mode === "research" && byName.get("SearXNG")?.status !== "OK") {
       warnings.push(byName.get("SearXNG")?.detail ?? "SearXNG jest niedostępny; sprawdź fallback DDGS.");
     }

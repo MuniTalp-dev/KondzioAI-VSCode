@@ -2,13 +2,19 @@
   "name": "kondzio-ai",
   "displayName": "Kondzio AI",
   "description": "Interfejs VS Code dla lokalnego Kondzio AI Orchestrator.",
-  "version": "0.4.4",
+  "version": "0.5.0",
   "publisher": "kondzio-studio",
   "license": "UNLICENSED",
-  "engines": { "vscode": "^1.100.0" },
-  "categories": ["Other"],
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Other"
+  ],
   "main": "./dist/src/extension.js",
-  "activationEvents": ["onView:kondzioAi.main"],
+  "activationEvents": [
+    "onView:kondzioAi.main"
+  ],
   "scripts": {
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "compile": "tsc -p ./",
@@ -23,36 +29,130 @@
     "typescript": "^5.9.0"
   },
   "contributes": {
-    "viewsContainers": { "activitybar": [{ "id": "kondzioAi", "title": "Kondzio AI", "icon": "media/kondzio-ai.svg" }] },
-    "views": { "kondzioAi": [{ "id": "kondzioAi.main", "name": "Kondzio AI", "type": "webview" }] },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "kondzioAi",
+          "title": "Kondzio AI",
+          "icon": "media/kondzio-ai.svg"
+        }
+      ]
+    },
+    "views": {
+      "kondzioAi": [
+        {
+          "id": "kondzioAi.main",
+          "name": "Kondzio AI",
+          "type": "webview"
+        }
+      ]
+    },
     "commands": [
-      { "command": "kondzioAi.newTask", "title": "Kondzio AI: New Task" },
-      { "command": "kondzioAi.auto1", "title": "Kondzio AI: AUTO 1" },
-      { "command": "kondzioAi.auto2", "title": "Kondzio AI: AUTO 2" },
-      { "command": "kondzioAi.auto3", "title": "Kondzio AI: AUTO 3" },
-      { "command": "kondzioAi.research", "title": "Kondzio AI: Research" },
-      { "command": "kondzioAi.status", "title": "Kondzio AI: Status" },
-      { "command": "kondzioAi.lastReport", "title": "Kondzio AI: Last Report" },
-      { "command": "kondzioAi.history", "title": "Kondzio AI: History" }
-      ,{ "command": "kondzioAi.checkForUpdates", "title": "Kondzio AI: Check for Updates" }
-      ,{ "command": "kondzioAi.reloadPanel", "title": "Kondzio AI: Reload Panel" }
-      ,{ "command": "kondzioAi.resetWebviewState", "title": "Kondzio AI: Reset WebView State" }
+      {
+        "command": "kondzioAi.newTask",
+        "title": "Kondzio AI: New Task"
+      },
+      {
+        "command": "kondzioAi.auto1",
+        "title": "Kondzio AI: AUTO 1"
+      },
+      {
+        "command": "kondzioAi.auto2",
+        "title": "Kondzio AI: AUTO 2"
+      },
+      {
+        "command": "kondzioAi.auto3",
+        "title": "Kondzio AI: AUTO 3"
+      },
+      {
+        "command": "kondzioAi.research",
+        "title": "Kondzio AI: Research"
+      },
+      {
+        "command": "kondzioAi.status",
+        "title": "Kondzio AI: Status"
+      },
+      {
+        "command": "kondzioAi.lastReport",
+        "title": "Kondzio AI: Last Report"
+      },
+      {
+        "command": "kondzioAi.history",
+        "title": "Kondzio AI: History"
+      },
+      {
+        "command": "kondzioAi.checkForUpdates",
+        "title": "Kondzio AI: Check for Updates"
+      },
+      {
+        "command": "kondzioAi.reloadPanel",
+        "title": "Kondzio AI: Reload Panel"
+      },
+      {
+        "command": "kondzioAi.resetWebviewState",
+        "title": "Kondzio AI: Reset WebView State"
+      }
     ],
     "configuration": {
       "title": "Kondzio AI",
       "properties": {
-        "kondzioAi.orchestratorPath": { "type": "string", "default": "E:\\AI\\Orchestrator", "description": "Ścieżka do lokalnego Orchestratora." },
-        "kondzioAi.researchLabPath": { "type": "string", "default": "E:\\AI\\ResearchLab", "description": "Ścieżka do ResearchLab." },
-        "kondzioAi.sandboxPath": { "type": "string", "default": "E:\\AI\\Repos", "description": "Ścieżka do sandboxu LOCAL." },
-        "kondzioAi.projectsRoot": { "type": "string", "default": "C:\\Projekty\\VCode", "description": "Główny katalog projektów." },
-        "kondzioAi.orchestratorRoot": { "type": "string", "default": "E:\\AI\\Orchestrator", "description": "Starsza nazwa ustawienia Orchestratora." },
-        "kondzioAi.pythonPath": { "type": "string", "default": "E:\\AI\\Orchestrator\\.venv\\Scripts\\python.exe", "description": "Interpreter Python Orchestratora." },
-        "kondzioAi.codexCliPath": { "type": "string", "default": "", "description": "Opcjonalna pełna ścieżka do Codex CLI. Puste ustawienie używa PATH i where.exe na Windows." },
-        "kondzioAi.extensionRepositoryPath": { "type": "string", "default": "E:\\AI\\Orchestrator\\vscode-extension", "description": "Repozytorium rozszerzenia do bezpiecznej automatyzacji Release / Git." }
+        "kondzioAi.orchestratorPath": {
+          "type": "string",
+          "default": "E:\\AI\\Orchestrator",
+          "description": "Ścieżka do lokalnego Orchestratora."
+        },
+        "kondzioAi.researchLabPath": {
+          "type": "string",
+          "default": "E:\\AI\\ResearchLab",
+          "description": "Ścieżka do ResearchLab."
+        },
+        "kondzioAi.sandboxPath": {
+          "type": "string",
+          "default": "E:\\AI\\Repos",
+          "description": "Ścieżka do sandboxu LOCAL."
+        },
+        "kondzioAi.projectsRoot": {
+          "type": "string",
+          "default": "C:\\Projekty\\VCode",
+          "description": "Główny katalog projektów."
+        },
+        "kondzioAi.orchestratorRoot": {
+          "type": "string",
+          "default": "E:\\AI\\Orchestrator",
+          "description": "Starsza nazwa ustawienia Orchestratora."
+        },
+        "kondzioAi.pythonPath": {
+          "type": "string",
+          "default": "E:\\AI\\Orchestrator\\.venv\\Scripts\\python.exe",
+          "description": "Interpreter Python Orchestratora."
+        },
+        "kondzioAi.codexCliPath": {
+          "type": "string",
+          "default": "",
+          "description": "Opcjonalna pełna ścieżka do Codex CLI. Puste ustawienie używa PATH i where.exe na Windows."
+        },
+        "kondzioAi.claudeUsagePath": {
+          "type": "string",
+          "default": "",
+          "description": "Opcjonalny plik JSON zapisany przez oficjalny Claude Code statusLine; rozszerzenie odczytuje tylko pola rate_limits."
+        },
+        "kondzioAi.extensionRepositoryPath": {
+          "type": "string",
+          "default": "E:\\AI\\Orchestrator\\vscode-extension",
+          "description": "Repozytorium rozszerzenia do bezpiecznej automatyzacji Release / Git."
+        }
       }
     }
   },
-  "files": ["dist", "media", "python", "docs", "README.md", "CHANGELOG.md", "LICENSE"],
+  "files": [
+    "dist",
+    "media",
+    "python",
+    "docs",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
   "author": "Właściciel projektu Kondzio AI",
   "private": true
 }

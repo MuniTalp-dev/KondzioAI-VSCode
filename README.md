@@ -52,6 +52,10 @@ Zbadaj i zaplanuj eksport PNG 300 DPI z modułu wizualizacji WPF .NET 10.
 
 UI nie wykonuje samodzielnie operacji Git. Dry-run nie może zmieniać repozytorium, AUTO 2 nie commituję, a push pozostaje zablokowany. Fraza `ZATWIERDZAM PUSH` nigdy nie jest generowana przez rozszerzenie.
 
+## Limity CODEX i CLAUDE
+
+Kondzio AI nie odczytuje tokenów, cookies ani prywatnego stanu innych rozszerzeń. Codex 0.147.0 i rozszerzenie `openai.chatgpt` nie publikują stabilnego API usage, dlatego CODEX pokazuje „—”. Claude Code 2.1.80+ może przekazywać udokumentowane pola `rate_limits` do statusLine. Opcjonalny adapter `media/claude-statusline.js` zapisuje wyłącznie `version` i `rate_limits` do `%LOCALAPPDATA%\KondzioAI\claude-usage.json`; użytkownik musi jawnie wskazać ten adapter w ustawieniu `statusLine` Claude Code. Ścieżkę alternatywną można ustawić przez `kondzioAi.claudeUsagePath`.
+
 ## Aktualizacje
 
 Kompaktowy nagłówek pokazuje wersję i symbol aktualności. Przyciski **CHANGELOG** oraz **AKTUALIZUJ** pojawiają się wyłącznie po potwierdzeniu nowszego GitHub Release.

@@ -1,5 +1,8 @@
 export type Autonomy = 1 | 2 | 3;
-export type ExecutorMode = "auto" | "local" | "research" | "codex";
+export type ExecutorMode = "auto" | "local" | "research" | "codex" | "claude";
+export interface UsageWindow { type: string; usedPercent: number; remainingPercent: number; resetAt?: string; }
+export interface AiUsage { provider: "CODEX" | "CLAUDE"; available: boolean; usedPercent?: number; remainingPercent?: number; resetAt?: string; windows: UsageWindow[]; source: "vscode-public-api" | "cli-json" | "claude-rate-limits" | "unsupported"; sourceVersion?: string; retrievedAt: string; error?: string; }
+export interface AiUsageProvider { readonly provider: "CODEX" | "CLAUDE"; retrieve(): Promise<AiUsage>; }
 
 export interface RunRequest { prompt: string; autonomy: Autonomy; mode: ExecutorMode; dry_run: boolean; prefer_local: boolean; block_codex_escalation: boolean; codex_approved?: boolean; sandbox_path?: string; projects_root?: string; }
 export interface RunSummary { run_id: string; prompt?: string; status?: string; autonomy?: number; agent?: string; eta_minutes?: number; actual_minutes?: number; started_at?: string; }
