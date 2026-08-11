@@ -4,6 +4,14 @@ Wszystkie istotne zmiany projektu są dokumentowane w tym pliku. Format opiera s
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-08-11
+
+### Fixed
+
+- Fixed active project propagation to run.
+- Fixed executor selection propagation.
+- Run is blocked when no project is selected.
+
 ## [0.5.0] - 2026-08-11
 
 ### Added
