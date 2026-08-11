@@ -29,7 +29,31 @@ jobs:
           }
       - name: Calculate SHA-256
         shell: pwsh
-        run: Get-FileHash *.vsix -Algorithm SHA256 | Format-List | Out-File -Encoding utf8 SHA256SUMS.txt
+        run: |
+          $assets = @(Get-ChildItem -File -Filter "kondzio-ai-*.vsix")
+          if ($assets.Count -ne 1) {
+            throw "Oczekiwano dokładnie jednego assetu VSIX, znaleziono: $($assets.Count)"
+          }
+          $asset = $assets[0]
+          $hash = (Get-FileHash -LiteralPath $asset.FullName -Algorithm SHA256).Hash.ToUpperInvariant()
+          $line = "$hash  $($asset.Name)"
+          [System.IO.File]::WriteAllText(
+            (Join-Path $PWD "SHA256SUMS.txt"),
+            "$line`n",
+            [System.Text.UTF8Encoding]::new($false)
+          )
+      - name: Validate SHA256SUMS.txt
+        shell: pwsh
+        run: |
+          $lines = @(Get-Content -LiteralPath SHA256SUMS.txt)
+          $pattern = '^[A-Fa-f0-9]{64}  kondzio-ai-[0-9]+\.[0-9]+\.[0-9]+\.vsix$'
+          if ($lines.Count -ne 1 -or $lines[0] -notmatch $pattern) {
+            throw "SHA256SUMS.txt musi zawierać dokładnie jedną poprawną linię: <HASH>  <FILENAME>"
+          }
+          $expectedAsset = "kondzio-ai-$((Get-Content package.json -Raw | ConvertFrom-Json).version).vsix"
+          if ($lines[0] -notmatch "  $([regex]::Escape($expectedAsset))$") {
+            throw "Nazwa pliku w SHA256SUMS.txt nie odpowiada assetowi $expectedAsset"
+          }
       - uses: softprops/action-gh-release@v3
         with:
           files: |

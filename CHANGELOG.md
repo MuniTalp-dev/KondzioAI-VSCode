@@ -4,6 +4,12 @@ Wszystkie istotne zmiany projektu są dokumentowane w tym pliku. Format opiera s
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-08-11
+
+### Fixed
+
+- Workflow release zapisuje `SHA256SUMS.txt` jako dokładnie jedną linię `<HASH>  <FILENAME>` w UTF-8 bez BOM i przed publikacją sprawdza format oraz zgodność nazwy assetu VSIX.
+
 ## [0.4.2] - 2026-08-11
 
 ### Fixed
