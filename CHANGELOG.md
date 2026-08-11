@@ -4,6 +4,14 @@ Wszystkie istotne zmiany projektu są dokumentowane w tym pliku. Format opiera s
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-08-11
+
+### Fixed
+
+- Ujednolicono wykrywanie Codex CLI z executorem: Windows preferuje `codex.cmd` z `where.exe`, obsługuje własną ścieżkę i fallback `%APPDATA%\\npm\\codex.cmd`.
+- Health check uruchamia dokładnie rozwiązaną ścieżkę Codex CLI, pokazuje wersję `0.147.0` i zapisuje bezpieczną diagnostykę w kanale Output.
+- Executor uruchamia wrapper npm przez `cmd.exe /d /s /c` bez `shell=true`, a prompt przekazuje przez standardowe wejście, eliminując `spawn codex ENOENT` i interpretację danych użytkownika przez powłokę.
+
 ### Added
 
 - Dodano w Diagnostyce bezpieczną sekcję Release / Git z checklistą gotowości, dry-runem, logiem stanów i modalnym potwierdzeniem pełnego wydania.

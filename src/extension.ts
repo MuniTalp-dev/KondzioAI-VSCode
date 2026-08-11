@@ -17,11 +17,11 @@ export function activate(context: vscode.ExtensionContext): void {
   const backend = new McpBackend(python, root, context.asAbsolutePath(join("python", "mcp_bridge.py")));
   const codexCliPath = config.get<string>("codexCliPath", "");
   const releaseRepositoryPath = config.get<string>("extensionRepositoryPath", "E:\\AI\\Orchestrator\\vscode-extension");
+  const log = (message: string) => output.appendLine(`[Kondzio AI] ${message}`);
   const controller = new OrchestratorController(backend, health => enrichCodexHealth(health,
-    Boolean(vscode.extensions.getExtension("openai.chatgpt") ?? vscode.extensions.getExtension("openai.codex")), codexCliPath));
+    Boolean(vscode.extensions.getExtension("openai.chatgpt") ?? vscode.extensions.getExtension("openai.codex")), codexCliPath, undefined, log));
   const version = String(context.extension.packageJSON.version);
   const updateRepository = "MuniTalp-dev/KondzioAI-VSCode";
-  const log = (message: string) => output.appendLine(`[Kondzio AI] ${message}`);
   log("Extension activated");
   log(`Version: ${version}`);
   log(`updateRepository: ${updateRepository}`);
