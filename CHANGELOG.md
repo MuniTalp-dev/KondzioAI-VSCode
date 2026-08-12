@@ -4,6 +4,17 @@ Wszystkie istotne zmiany projektu są dokumentowane w tym pliku. Format opiera s
 
 ## [Unreleased]
 
+## [0.5.4] - 2026-08-11
+
+### Added
+
+- Multi-project context resolution and Node/TypeScript project support.
+
+### Changed
+
+- `solutionPath` is optional outside .NET projects.
+- Validation commands and acceptance criteria are selected for the detected project type.
+
 ## [0.5.3] - 2026-08-11
 
 ### Fixed
