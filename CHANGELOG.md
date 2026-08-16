@@ -4,6 +4,19 @@ Wszystkie istotne zmiany projektu są dokumentowane w tym pliku. Format opiera s
 
 ## [Unreleased]
 
+## [0.5.5] - 2026-08-16
+
+### Changed
+
+- redesigned four-tab interface
+- new Work view
+- operational Activity console
+- project overview
+- reorganized Settings and Diagnostics
+- About view
+- clickable update status
+- automatic update check on startup
+
 ## [0.5.4] - 2026-08-11
 
 ### Added

@@ -1,8 +1,8 @@
 {
   "name": "kondzio-ai",
   "displayName": "Kondzio AI",
-  "description": "Interfejs VS Code dla lokalnego Kondzio AI Orchestrator.",
-  "version": "0.5.4",
+  "description": "Interfejs VS Code dla lokalnego Silnika Kondzio AI.",
+  "version": "0.5.5",
   "publisher": "kondzio-studio",
   "license": "UNLICENSED",
   "engines": {
@@ -99,7 +99,7 @@
         "kondzioAi.orchestratorPath": {
           "type": "string",
           "default": "E:\\AI\\Orchestrator",
-          "description": "Ścieżka do lokalnego Orchestratora."
+          "description": "Ścieżka do lokalnego backendu Kondzio AI."
         },
         "kondzioAi.researchLabPath": {
           "type": "string",
@@ -129,7 +129,7 @@
         "kondzioAi.pythonPath": {
           "type": "string",
           "default": "E:\\AI\\Orchestrator\\.venv\\Scripts\\python.exe",
-          "description": "Interpreter Python Orchestratora."
+          "description": "Interpreter Python Silnika Kondzio AI."
         },
         "kondzioAi.codexCliPath": {
           "type": "string",
@@ -145,6 +145,11 @@
           "type": "string",
           "default": "E:\\AI\\Orchestrator\\vscode-extension",
           "description": "Repozytorium rozszerzenia do bezpiecznej automatyzacji Release / Git."
+        },
+        "kondzioAi.autoCheckUpdates": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatycznie sprawdzaj dostępność aktualizacji co 24 godziny."
         }
       }
     }

@@ -31,6 +31,7 @@ export class UpdateService {
               private readonly log: UpdateLogger = () => {}, private readonly timeoutMs = UPDATE_TIMEOUT_MS) {}
 
   get installedVersion(): string { return this.currentVersion; }
+  get lastCheckedAt(): number | undefined { return this.store.get<number>(UpdateService.checkedKey); }
 
   shouldAutoCheck(now = Date.now()): boolean {
     const last = this.store.get<number>(UpdateService.checkedKey) ?? 0;

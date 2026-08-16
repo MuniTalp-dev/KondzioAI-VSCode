@@ -11,7 +11,7 @@ test("activeProjectRoot jest walidowany i zamieniany na jawny stan projektu", ()
   mkdirSync(join(root, ".git"), { recursive: true });
   writeFileSync(join(root, ".git", "config"), '[remote "origin"]\n\turl = https://github.com/MuniTalp-dev/KondzioAI-VSCode.git\n');
   try {
-    assert.deepEqual(resolveProjectState(root), { projectRoot: root, repoRoot: root, projectName: "KondzioAI-VSCode" });
+    assert.deepEqual(resolveProjectState(root), { projectRoot: root, repoRoot: root, projectName: "KondzioAI-VSCode", projectType: "Inny", branch: "—", gitStatus: "CLEAN", githubRemote: "https://github.com/MuniTalp-dev/KondzioAI-VSCode.git" });
     assert.equal(resolveProjectState(join(root, "missing")), undefined);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });

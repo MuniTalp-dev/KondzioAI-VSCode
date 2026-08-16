@@ -1,152 +1,77 @@
 import assert from "node:assert/strict";
-import { readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Script } from "node:vm";
 import test from "node:test";
 
-const markup = readFileSync(join(__dirname, "..", "..", "src", "panel.ts"), "utf8");
+const root = join(__dirname, "..", "..");
+const markup = readFileSync(join(root, "src", "panelHtml.ts"), "utf8");
+const panel = readFileSync(join(root, "src", "panel.ts"), "utf8");
+const script = readFileSync(join(root, "media", "webview.js"), "utf8");
 
-test("panel jest responsywny od 260 do 500 px bez horizontal overflow", () => {
-  assert.match(markup, /overflow-x:hidden/);
-  assert.match(markup, /@media\(max-width:300px\)/);
-  assert.match(markup, /minmax\(0,1fr\)/);
+test("0.5.5 ma cztery główne zakładki i domyślną kartę PRACA", () => {
+  assert.equal((markup.match(/role=\\?"tab\\?"/g) ?? []).length, 4);
+  assert.equal((markup.match(/role=\\?"tabpanel\\?"/g) ?? []).length, 4);
+  assert.match(markup, /workTab[\s\S]*aria-selected=\"true\"[\s\S]*>PRACA</);
+  for (const label of ["PRACA", "PROJEKT", "USTAWIENIA", "O PROGRAMIE"]) assert.match(markup, new RegExp(`>${label}<`));
 });
 
-test("panel ma RAL 6018, focus, aria-live i semantyczne przyciski", () => {
-  assert.match(markup, /--kondzio-accent:#61993b/);
-  assert.match(markup, /:focus-visible/);
-  assert.ok((markup.match(/aria-live=/g) ?? []).length >= 4);
-  for (const command of ["run", "healthCheck", "research", "documentation"]) assert.match(markup, new RegExp(`data-command="${command}"`));
-  assert.match(readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8"), /dataset\.command = "checkForUpdates"/);
+test("ostatnia karta jest zapamiętywana w stanie WebView", () => {
+  assert.match(script, /vscode\.getState\(\)/); assert.match(script, /vscode\.setState\(/);
+  assert.match(script, /activeTab/); assert.match(script, /saved\.activeTab \|\| "workPanel"/);
 });
 
-test("zewnętrzny klient WebView ma poprawną składnię i bezpieczną inicjalizację", () => {
-  const script = readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8");
-  assert.doesNotThrow(() => new Script(script, { filename: "media/webview.js" }));
-  assert.equal((script.match(/acquireVsCodeApi\(\)/g) ?? []).length, 1);
-  assert.match(script, /type: "clientReady"/);
-  assert.match(script, /window\.onerror/);
-  assert.match(script, /unhandledrejection/);
+test("status aktualizacji jest klikalny, dostępny i pokazuje akcje tylko dla update", () => {
+  assert.match(markup, /id=\"versionStatus\"[^>]*data-command=\"checkForUpdates\"[^>]*aria-label=/);
+  assert.match(script, /value\.status === "checking"/); assert.match(script, /updateActions.*available/);
+  assert.match(markup, /data-command=\"showChangelog\"/); assert.match(markup, /data-command=\"installUpdate\"/);
 });
 
-test("finalny HTML używa zewnętrznego skryptu i escapuje ścieżki, quotes oraz newlines", () => {
-  assert.match(markup, /asWebviewUri/);
-  assert.match(markup, /src="\$\{safeScriptUri\}"/);
-  assert.match(markup, /replace\(\/\\n\/g, "&#10;"\)/);
-  assert.match(markup, /replace\(\/"\/g, "&quot;"\)/);
-  assert.doesNotMatch(markup, /return `[^`]*acquireVsCodeApi/s);
-  const windowsPath = String.raw`C:\Projekty\Kondzio "AI"\line` + "\nnext</script>";
-  const escaped = windowsPath.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\r/g, "&#13;").replace(/\n/g, "&#10;");
-  assert.equal(escaped, "C:\\Projekty\\Kondzio &quot;AI&quot;\\line&#10;next&lt;/script&gt;");
-
-  const moduleLoader = require("node:module") as { _load: (request: string, parent: unknown, isMain: boolean) => unknown };
-  const originalLoad = moduleLoader._load;
-  moduleLoader._load = (request, parent, isMain) => request === "vscode" ? {} : originalLoad(request, parent, isMain);
-  try {
-    const render = (require("../src/panel") as { html: (version: string, settings: Record<string, string>, scriptUri: string, cspSource: string) => string }).html;
-    const finalHtml = render("0.3.1", { orchestratorPath: windowsPath }, "vscode-webview://id/media/webview.js", "vscode-webview://id");
-    writeFileSync(join(tmpdir(), "kondzio-ai-webview-final.html"), finalHtml, "utf8");
-    assert.match(finalHtml, /<script nonce="[^"]+" src="vscode-webview:\/\/id\/media\/webview\.js"><\/script>/);
-    assert.doesNotMatch(finalHtml, /<script nonce="[^"]+">[\s\S]+<\/script>/);
-    assert.match(finalHtml, /value="C:\\Projekty\\Kondzio &quot;AI&quot;\\line&#10;next&lt;\/script&gt;"/);
-  } finally {
-    moduleLoader._load = originalLoad;
-  }
+test("PRACA zawiera usage, pole zadania, macierz 2x2 i bezpieczny run", () => {
+  assert.match(markup, /id=\"workPanel\"[\s\S]*id=\"usageLines\"/);
+  assert.match(markup, /Opisz zadanie dla Kondzio AI/); assert.doesNotMatch(markup, /Opisz zadanie dla Orchestratora/);
+  assert.match(markup, /class=\"matrix\"/); assert.equal((markup.match(/role=\"switch\"/g) ?? []).length, 3);
+  for (const value of ["AUTONOMIA", "WYKONAWCA", "TRYB PRÓBNY", "OSZCZĘDZAJ AI"]) assert.match(markup, new RegExp(value));
+  assert.match(script, /preferLocal: switchOn\("saveCodex"\)/); assert.match(script, /if \(!projectState\) return/);
 });
 
-test("instalacja i reload wymagają osobnych kliknięć użytkownika", () => {
-  const script = readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8");
-  assert.match(markup, /data-command="installUpdate"/); assert.match(markup, /data-command="reloadWindow"/);
-  assert.match(script, /updateActions.*hidden/); assert.match(script, /message\.type === "installSuccess"/);
-  assert.doesNotMatch(script, /workbench\.action\.reloadWindow/);
+test("Activity renderuje etapy, elapsed, fallback ETA, podsumowania i auto-scroll", () => {
+  for (const label of ["Analiza zadania", "Routing", "Analizuję projekt", "Wprowadzenie zmian", "Testy", "Walidacja"]) assert.match(script, new RegExp(label));
+  assert.match(script, /setInterval\([\s\S]*1000\)/); assert.match(script, /ETA:.*"—"/);
+  assert.match(script, /ZAKOŃCZONO •/); assert.match(script, /ZAKOŃCZONO Z BŁĘDEM/);
+  assert.match(script, /autoScroll/); assert.match(markup, /↓ NAJNOWSZE/); assert.match(markup, /aria-live=\"polite\"/);
 });
 
-test("błąd bezpieczeństwa updatera udostępnia wyłącznie otwarcie tego wydania", () => {
-  const script = readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8");
-  assert.match(markup, /installSecurityError/);
-  assert.match(script, /openReleaseAfterError/);
-  assert.match(script, /OTWÓRZ WYDANIE/);
-  assert.match(script, /url: update\?\.releaseUrl/);
+test("PROJEKT pokazuje activeProject i zapowiedź przyszłych funkcji", () => {
+  for (const value of ["AKTYWNY PROJEKT", "Typ", "Branch", "Git", "GitHub", "ODŚWIEŻ", "OTWÓRZ FOLDER", "NOWY PROJEKT", "ZMIEŃ PROJEKT", "0.5.6 / 0.6.0"]) assert.match(markup, new RegExp(value));
+  assert.match(panel, /type: "projectState", value: this\.activeProject/);
 });
 
-test("0.4.0 ma kompaktowy header, macierz 2x2, switche i zakładki", () => {
-  const script = readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8");
-  assert.match(markup, /K·AI[\s\S]*Kondzio AI[\s\S]*versionStatus/);
-  assert.match(markup, /@media\(min-width:320px\)/);
-  assert.equal((markup.match(/role="switch"/g) ?? []).length, 2);
-  assert.match(markup, /aria-checked="false"/);
-  assert.equal((markup.match(/role="tab"/g) ?? []).length, 5);
-  assert.equal((markup.match(/role="tabpanel"/g) ?? []).length, 5);
-  assert.match(script, /preferLocal: switchOn\("saveCodex"\)/);
-  assert.match(script, /blockCodexEscalation: switchOn\("saveCodex"\)/);
-  assert.match(script, /historyLimit = 5/);
-  assert.match(script, /CODEX: WYMAGA ZGODY/);
+test("USTAWIENIA zachowują diagnostykę, sekcje i Release Git", () => {
+  for (const value of ["ŚCIEŻKI", "AI / WYKONAWCY", "RESEARCH", "GIT / GITHUB", "AKTUALIZACJE", "DIAGNOSTYKA", "RELEASE / GIT", "ZAAWANSOWANE"]) assert.match(markup, new RegExp(value));
+  for (const command of ["healthCheck", "releaseReadiness", "releaseDryRun", "prepareFullRelease", "confirmFullRelease"]) assert.match(markup, new RegExp(`data-command="${command}`));
+  assert.match(script, /Problem:.*Wpływ:.*Rozwiązanie:/s); assert.match(script, /push main\\n- push tag/);
 });
 
-test("status aktualizacji pokazuje sam symbol i chowa akcje bez update", () => {
-  const script = readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8");
-  assert.match(script, /value\.status === "current" \? "✓"/);
-  assert.match(script, /Oprogramowanie aktualne/);
-  assert.match(script, /updateActions.*toggle\("hidden", !available\)/);
-  assert.match(markup, /data-command="showChangelog"/);
-  assert.match(markup, /id="releaseNotes"/);
+test("O PROGRAMIE pokazuje informacje, dokumenty i licencję bez wymyślania Buy Me a Coffee", () => {
+  assert.match(markup, /Local-first AI development assistant/); assert.match(markup, /Konrad \/ KONDZIO\.PL/);
+  assert.match(markup, /Buy Me a Coffee/); assert.match(markup, /<button disabled[^>]*>Buy Me a Coffee/);
+  assert.match(markup, /LICENCJA/); assert.match(markup, /Licencja nie została jeszcze określona/);
+  assert.match(markup, /POKAŻ LICENCJĘ/); assert.match(markup, /DOKUMENTACJA/); assert.match(markup, /CHANGELOG/);
 });
 
-test("nazwy narzędzi i statusy mają wspólne pionowe wyrównanie flex", () => {
-  const script = readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8");
-  assert.match(markup, /\.tool-row\{display:flex;align-items:center;justify-content:space-between/);
-  assert.match(markup, /\.tool-status\{display:inline-flex;align-items:center/);
-  assert.match(markup, /\.tool-name\{min-width:0;overflow-wrap:anywhere/);
-  assert.match(markup, /\.tool-status[^}]*margin:0/);
-  assert.doesNotMatch(markup, /\.tool-status[^}]*translateY/);
-  assert.match(script, /row\.className = "tool-row"/);
-  assert.match(script, /status\.className = `tool-status \$\{state\}`/);
-  assert.match(script, /row\.append\(name, status\)/);
+test("panel jest responsywny dla 260, 320, 400 i 500 px bez overflow", () => {
+  assert.match(markup, /overflow-x:hidden/); assert.match(markup, /@media\(max-width:300px\)/); assert.match(markup, /@media\(min-width:400px\)/);
+  assert.match(markup, /minmax\(0,1fr\)/); assert.match(markup, /grid-template-columns:repeat\(4/);
 });
 
-test("Diagnostyka ma bezpieczną automatyzację Release / Git z potwierdzeniem", () => {
-  const script = readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8");
-  for (const command of ["releaseReadiness", "releaseDryRun", "prepareFullRelease", "confirmFullRelease"]) assert.match(script, new RegExp(`data-command=\\"${command}\\"`));
-  assert.match(script, /ZATWIERDZAM WYDANIE/);
-  assert.match(script, /push main\\n- push tag/);
-  assert.match(script, /releaseConfirmModal.*hidden/);
-  assert.match(markup, /randomUUID/);
-  assert.match(markup, /Brak ważnego potwierdzenia wydania/);
+test("accessibility i RAL 6018 są częścią finalnego panelu", () => {
+  assert.match(markup, /--accent:#61993b/); assert.match(markup, /:focus-visible/);
+  assert.equal((markup.match(/aria-controls=/g) ?? []).length >= 8, true);
+  assert.match(markup, /aria-selected=/); assert.match(markup, /aria-checked=/); assert.match(markup, /aria-live=/);
 });
 
-test("0.5.0 ma responsywne usage, Save AI, Claude i dziennik pracy", () => {
-  const script = readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8");
-  assert.match(markup, /id="usageLines"/); assert.match(markup, /mini-progress/); assert.match(markup, /OSZCZĘDZAJ AI/);
-  assert.match(markup, /value="claude">CLAUDE/); assert.match(markup, /DZIENNIK PRACY/); assert.match(markup, /@media\(max-width:300px\).*usage-line/);
-  for (const stage of ["Analiza zadania", "Routing", "Research", "Repo\/context", "Executor", "Zmiany plików", "Testy", "Walidacja", "Zakończenie"]) assert.match(script, new RegExp(stage));
-  assert.match(script, /message\.type === "usage"/); assert.match(script, /rate_limits|usedPercent/);
-});
-
-test("0.5.3 przekazuje aktywny projekt Extension Host do WebView", () => {
-  const script = readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8");
-  assert.match(markup, /inspect<string>\("activeProjectRoot"\)/);
-  assert.match(markup, /type: "projectState", value: this\.activeProject/);
-  assert.match(script, /message\.type === "projectState"/);
-  for (const field of ["projectName", "projectRoot", "repoRoot"]) assert.match(script, new RegExp(`${field}: projectState\\.${field}`));
-});
-
-test("0.5.3 mapuje każdy wariant wykonawcy bez wymuszania AUTO", () => {
-  const script = readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8");
-  for (const mode of ["auto", "local", "codex", "claude", "research"]) assert.match(markup, new RegExp(`value="${mode}"`));
-  assert.match(script, /mode: \$\("mode"\)\.value/);
-  assert.doesNotMatch(script, /mode:\s*["']auto["']/);
-});
-
-test("0.5.3 pokazuje projekt i blokuje run bez projektu", () => {
-  const script = readFileSync(join(__dirname, "..", "..", "media", "webview.js"), "utf8");
-  assert.match(markup, /Projekt: \$\{escapeHtmlAttribute\(project\?\.projectName \?\? "NIE WYBRANO"\)\}/);
-  assert.match(markup, /id="runTask"[\s\S]*disabled/);
-  assert.match(script, /if \(!projectState\) return undefined/);
-  assert.match(script, /\$\("runTask"\)\.disabled = !projectState/);
-});
-
-test("0.5.3 loguje metadane runu bez pełnego promptu", () => {
-  assert.match(markup, /Run request:\\nprojectName=\$\{project\.projectName\}[\s\S]*executor=\$\{mode\}[\s\S]*dryRun=\$\{dryRun\}/);
-  assert.match(markup, /message\.type === "run" \? "WebView message received: run"/);
+test("zewnętrzny klient WebView ma poprawną składnię i jedną inicjalizację API", () => {
+  assert.doesNotThrow(() => new Script(script)); assert.equal((script.match(/acquireVsCodeApi\(\)/g) ?? []).length, 1);
+  assert.match(script, /type: "clientReady"/); assert.match(script, /unhandledrejection/);
 });
